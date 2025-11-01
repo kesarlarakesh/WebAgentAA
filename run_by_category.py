@@ -5,6 +5,7 @@ from sheets_reader import get_tasks_by_category
 from task_runner_utils import run_tasks_sequential, run_tasks_parallel, print_summary
 from report_generator import generate_html_report, save_report_index
 import os
+import config
 
 load_dotenv()
 
@@ -12,19 +13,19 @@ load_dotenv()
 async def main():
     llm = get_llm()
     
-    # Read configuration from .env
-    spreadsheet_id = os.getenv('SPREADSHEET_ID')
-    category = os.getenv('RUN_CATEGORY', 'Hotels')
-    execution_mode = os.getenv('EXECUTION_MODE', 'sequential').lower()
-    task_delay = int(os.getenv('TASK_DELAY', '5'))
+    # Read configuration from config.py
+    spreadsheet_id = config.SPREADSHEET_ID
+    category = config.RUN_CATEGORY
+    execution_mode = config.EXECUTION_MODE.lower()
+    task_delay = config.TASK_DELAY
     
     if not spreadsheet_id:
-        print("❌ SPREADSHEET_ID not found in .env file")
+        print("❌ SPREADSHEET_ID not found in config.py")
         return
     
     if not category:
-        print("❌ RUN_CATEGORY not found in .env file")
-        print("Please add RUN_CATEGORY=<category name> to your .env file")
+        print("❌ RUN_CATEGORY not found in config.py")
+        print("Please add RUN_CATEGORY in config.py")
         return
     
     try:

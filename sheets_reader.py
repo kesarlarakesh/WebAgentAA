@@ -2,12 +2,13 @@ import gspread
 from google.oauth2.service_account import Credentials
 import os
 from dotenv import load_dotenv
+import config
 
 load_dotenv()
 
 def _get_sheet_client(spreadsheet_id, sheet_name):
     """Helper function to authenticate and get sheet client"""
-    creds_file = os.getenv('GOOGLE_SHEETS_CREDENTIALS')
+    creds_file = config.GOOGLE_SHEETS_CREDENTIALS
     
     if not creds_file:
         raise ValueError("GOOGLE_SHEETS_CREDENTIALS not found in .env file")
@@ -47,11 +48,11 @@ def get_all_tasks(spreadsheet_id, sheet_name=None, start_row=None, active_only=T
         Column E: Active (yes/no)
     """
     
-    # Read from .env if not provided
+    # Read from config.py if not provided
     if sheet_name is None:
-        sheet_name = os.getenv('SHEET_NAME')
+        sheet_name = config.SHEET_NAME
     if start_row is None:
-        start_row = int(os.getenv('START_ROW'))
+        start_row = config.START_ROW
     
     sheet = _get_sheet_client(spreadsheet_id, sheet_name)
     

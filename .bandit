@@ -1,0 +1,6 @@
+[bandit]
+# Bandit security scanner configuration
+exclude_dirs = ['.venv', 'venv', '.git', '__pycache__', 'reports']
+skips = B101,B601
+# B101: Test for use of assert (common in tests)
+# B601: Paramiko calls with shell=True (if we're not using it)

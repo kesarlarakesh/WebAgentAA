@@ -1,0 +1,908 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Execution Report - 20251101_204913</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 20px;
+            min-height: 100vh;
+        }
+        
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            overflow: hidden;
+        }
+        
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+        
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.2);
+        }
+        
+        .header p {
+            font-size: 1.1em;
+            opacity: 0.9;
+        }
+        
+        .summary {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            padding: 30px;
+            background: #f8f9fa;
+        }
+        
+        .summary-card {
+            background: white;
+            padding: 25px;
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            text-align: center;
+            transition: transform 0.3s ease;
+        }
+        
+        .summary-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 6px 12px rgba(0,0,0,0.15);
+        }
+        
+        .summary-card h3 {
+            color: #666;
+            font-size: 0.9em;
+            text-transform: uppercase;
+            margin-bottom: 10px;
+            letter-spacing: 1px;
+        }
+        
+        .summary-card .value {
+            font-size: 2.5em;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+        
+        .summary-card.total .value { color: #667eea; }
+        .summary-card.passed .value { color: #10b981; }
+        .summary-card.failed .value { color: #ef4444; }
+        .summary-card.pass-rate .value { color: #f59e0b; }
+        
+        .results-section {
+            padding: 30px;
+        }
+        
+        .results-section h2 {
+            color: #333;
+            margin-bottom: 20px;
+            font-size: 1.8em;
+            border-bottom: 3px solid #667eea;
+            padding-bottom: 10px;
+        }
+        
+        .test-card {
+            background: white;
+            border: 2px solid #e5e7eb;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            overflow: hidden;
+            transition: all 0.3s ease;
+        }
+        
+        .test-card:hover {
+            box-shadow: 0 8px 16px rgba(0,0,0,0.1);
+            border-color: #667eea;
+        }
+        
+        .test-card.passed {
+            border-left: 6px solid #10b981;
+        }
+        
+        .test-card.failed {
+            border-left: 6px solid #ef4444;
+        }
+        
+        .test-header {
+            padding: 20px;
+            background: #f9fafb;
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .test-header:hover {
+            background: #f3f4f6;
+        }
+        
+        .test-info {
+            flex: 1;
+        }
+        
+        .test-number {
+            font-size: 1.5em;
+            font-weight: bold;
+            color: #667eea;
+            margin-bottom: 5px;
+        }
+        
+        .test-scenario {
+            font-size: 1.2em;
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 8px;
+        }
+        
+        .test-meta {
+            display: flex;
+            gap: 15px;
+            font-size: 0.9em;
+            color: #666;
+        }
+        
+        .test-meta span {
+            background: #e5e7eb;
+            padding: 4px 12px;
+            border-radius: 20px;
+        }
+        
+        .status-badge {
+            padding: 10px 25px;
+            border-radius: 25px;
+            font-weight: bold;
+            font-size: 1.1em;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        
+        .status-badge.passed {
+            background: #d1fae5;
+            color: #065f46;
+        }
+        
+        .status-badge.failed {
+            background: #fee2e2;
+            color: #991b1b;
+        }
+        
+        .test-details {
+            padding: 20px;
+            display: none;
+            background: white;
+            border-top: 1px solid #e5e7eb;
+        }
+        
+        .test-details.expanded {
+            display: block;
+        }
+        
+        .prompt-section {
+            margin-bottom: 20px;
+        }
+        
+        .prompt-section h4 {
+            color: #667eea;
+            margin-bottom: 10px;
+            font-size: 1.1em;
+        }
+        
+        .prompt-text {
+            background: #f9fafb;
+            padding: 15px;
+            border-radius: 8px;
+            border-left: 4px solid #667eea;
+            white-space: pre-wrap;
+            font-family: 'Courier New', monospace;
+            font-size: 0.95em;
+            color: #333;
+            line-height: 1.6;
+        }
+        
+        .error-section {
+            margin-top: 20px;
+            background: #fee2e2;
+            padding: 15px;
+            border-radius: 8px;
+            border-left: 4px solid #ef4444;
+        }
+        
+        .error-section h4 {
+            color: #991b1b;
+            margin-bottom: 10px;
+        }
+        
+        .error-text {
+            color: #7f1d1d;
+            font-family: 'Courier New', monospace;
+            font-size: 0.95em;
+        }
+        
+        .agent-steps-section {
+            margin-top: 20px;
+            background: #f0fdf4;
+            padding: 15px;
+            border-radius: 8px;
+            border-left: 4px solid #10b981;
+        }
+        
+        .agent-steps-section h4 {
+            color: #065f46;
+            margin-bottom: 15px;
+            font-size: 1.1em;
+        }
+        
+        .agent-step {
+            background: white;
+            padding: 12px;
+            margin-bottom: 10px;
+            border-radius: 6px;
+            border-left: 3px solid #10b981;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        }
+        
+        .agent-step:last-child {
+            margin-bottom: 0;
+        }
+        
+        .step-header {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 8px;
+        }
+        
+        .step-number {
+            background: #10b981;
+            color: white;
+            padding: 4px 10px;
+            border-radius: 20px;
+            font-weight: bold;
+            font-size: 0.85em;
+        }
+        
+        .step-action {
+            color: #047857;
+            font-weight: 600;
+            font-family: 'Courier New', monospace;
+        }
+        
+        .step-details {
+            color: #666;
+            font-size: 0.9em;
+            font-family: 'Courier New', monospace;
+            margin-top: 8px;
+            padding: 8px;
+            background: #f9fafb;
+            border-radius: 4px;
+        }
+        
+        .logs-section {
+            margin-top: 20px;
+            background: #1e293b;
+            padding: 15px;
+            border-radius: 8px;
+            color: #e2e8f0;
+            font-family: 'Courier New', monospace;
+            font-size: 0.9em;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+        
+        .logs-section h4 {
+            color: #60a5fa;
+            margin-bottom: 10px;
+        }
+        
+        .log-entry {
+            padding: 5px 0;
+            border-bottom: 1px solid #334155;
+        }
+        
+        .log-entry:last-child {
+            border-bottom: none;
+        }
+        
+        .expand-icon {
+            transition: transform 0.3s ease;
+            font-size: 1.5em;
+            color: #667eea;
+        }
+        
+        .expanded .expand-icon {
+            transform: rotate(180deg);
+        }
+        
+        .footer {
+            background: #f9fafb;
+            padding: 20px;
+            text-align: center;
+            color: #666;
+            border-top: 1px solid #e5e7eb;
+        }
+        
+        @media (max-width: 768px) {
+            .summary {
+                grid-template-columns: 1fr;
+            }
+            
+            .test-header {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 15px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🤖 Browser Automation Test Report</h1>
+            <p>Generated on November 01, 2025 at 08:49 PM</p>
+        </div>
+        
+        <div class="summary">
+            <div class="summary-card total">
+                <h3>Total Tests</h3>
+                <div class="value">1</div>
+            </div>
+            <div class="summary-card passed">
+                <h3>Passed</h3>
+                <div class="value">1</div>
+            </div>
+            <div class="summary-card failed">
+                <h3>Failed</h3>
+                <div class="value">0</div>
+            </div>
+            <div class="summary-card pass-rate">
+                <h3>Pass Rate</h3>
+                <div class="value">100.0%</div>
+            </div>
+        </div>
+        
+        <div class="results-section">
+            <h2>📋 Test Results</h2>
+
+            <div class="test-card passed">
+                <div class="test-header" onclick="toggleDetails(this)">
+                    <div class="test-info">
+                        <div class="test-number">Test #1</div>
+                        <div class="test-scenario">Hotel E2E test for single room</div>
+                        <div class="test-meta">
+                            <span>📂 Hotels</span>
+                            <span>⭐ High</span>
+                        </div>
+                    </div>
+                    <div>
+                        <span class="status-badge passed">PASSED</span>
+                    </div>
+                    <div class="expand-icon">▼</div>
+                </div>
+                
+                <div class="test-details">
+                    <div class="prompt-section">
+                        <h4>📝 Test Prompt</h4>
+                        <div class="prompt-text">Perform below steps and navigate to payment page for single room search
+
+- Launch https://www.airasia.com/hotels/en/gb
+- Click on destination input box and provide destination name
+- Wait for suggesstion to appear & then click on first suggestion from the input drop down list
+- Click on search button
+- Once hotels are listed, randomly click on any hotel card
+- Scroll down to room section and click on any random room
+- Fill guest details with characters only and click on continue button
+- Check if user landed on payment page</div>
+                    </div>
+
+                    <div class="agent-steps-section">
+                        <h4>🤖 Agent Execution Steps</h4>
+
+                        <div class="agent-step">
+                            <div class="step-header">
+                                <span class="step-number">Step 1</span>
+                                <span class="step-action">N/A</span>
+                            </div>
+
+                            <div class="step-details"><strong>Result:</strong> [ActionResult(is_done=False, success=None, error=None, attachments=None, long_term_memory='Found initial url and automatically loaded it. Navigated to https://www.airasia.com/hotels/en/gb', extracted_content='🔗 Navigated to https://www.airasia.com/hotels/en/gb', include_extracted_content_only_once=False, metadata=None, include_in_memory=False)]</div>
+
+                            <div class="step-details"><strong>Model Output:</strong> thinking=None evaluation_previous_goal='Start' memory=None next_goal='Initial navigation' action=[ActionModel(root=NavigateActionModel(navigate=NavigateAction(url='https://www.airasia.com/hotels/en/gb', new_tab=False)))]</div>
+
+                        </div>
+
+                        <div class="agent-step">
+                            <div class="step-header">
+                                <span class="step-number">Step 2</span>
+                                <span class="step-action">N/A</span>
+                            </div>
+
+                            <div class="step-details"><strong>Result:</strong> [ActionResult(is_done=False, success=None, error=None, attachments=None, long_term_memory=None, extracted_content='Clicked element', include_extracted_content_only_once=False, metadata=None, include_in_memory=False)]</div>
+
+                            <div class="step-details"><strong>Model Output:</strong> thinking="I have successfully navigated to the starting URL. The first required step is to click on the destination input box and provide a destination name. However, the current browser state only shows header elements, service tabs, and a cookie banner ([250]). Since I cannot see the destination i...</div>
+
+                        </div>
+
+                        <div class="agent-step">
+                            <div class="step-header">
+                                <span class="step-number">Step 3</span>
+                                <span class="step-action">N/A</span>
+                            </div>
+
+                            <div class="step-details"><strong>Result:</strong> [ActionResult(is_done=False, success=None, error=None, attachments=None, long_term_memory="Input 'Bangkok' into element 682.", extracted_content="Input 'Bangkok' into element 682.", include_extracted_content_only_once=False, metadata={'input_x': 1506.59375, 'input_y': 221.0}, include_in_memory=False)]</div>
+
+                            <div class="step-details"><strong>Model Output:</strong> thinking="The previous step successfully closed the cookie banner. Now I need to proceed with the hotel search. The first step in the user request is to input a destination name into the destination input box. I have identified the destination input field as index [682] with placeholder 'Destination...</div>
+
+                        </div>
+
+                        <div class="agent-step">
+                            <div class="step-header">
+                                <span class="step-number">Step 4</span>
+                                <span class="step-action">N/A</span>
+                            </div>
+
+                            <div class="step-details"><strong>Result:</strong> [ActionResult(is_done=False, success=None, error="41 validation errors for AgentOutput\naction.0.DoneActionModel.done\n  Field required [type=missing, input_value={'screenshot': {'_placeho...: 'request screenshot'}}, input_type=dict]\n    For further information visit https://errors.pydantic.dev/2.12/v/missing\naction.0.DoneActionModel.screenshot\n  Extra inputs are not permitted [type=extra_forbidden, input_value={'_placeholder': 'request screenshot'}, input_type=dict]\n    For further information visit https://errors.pydantic.dev/2.12/v/extra_forbidden\naction.0.SearchActionModel.search\n  Field required [type=missing, input_value={'screenshot': {'_placeho...: 'request screenshot'}}, input_type=dict]\n    For further information visit https://errors.pydantic.dev/2.12/v/missing\naction.0.SearchActionModel.screenshot\n  Extra inputs are not permitted [type=extra_forbidden, input_value={'_placeholder': 'request screenshot'}, input_type=dict]\n    For further information visit https://errors.pydantic.dev/2.12/v/extra_forbidden\naction.0.NavigateActionModel.navigate\n  Field required [type=missing, input_value={'screenshot': {'_placeho...: 'request screenshot'}}, input_type=dict]\n    For further information visit https://errors.pydantic.dev/2.12/v/missing\naction.0.NavigateActionModel.screenshot\n  Extra inputs are not permitted [type=extra_forbidden, input_value={'_placeholder': 'request screenshot'}, input_type=dict]\n    For further information visit https://errors.pydantic.dev/2.12/v/extra_forbidden\naction.0.GoBackActionModel.go_back\n  Field required [type=missing, input_value={'screenshot': {'_placeho...: 'request screenshot'}}, input_type=dict]\n    For further information visit https://errors.pydantic.dev/2.12/v/missing\naction.0.GoBackActionModel.screenshot\n  Extra inputs are not permitted [type=extra_forbidden, input_value={'_placeholder': 'request screenshot'}, input_type=dict]\n    For further information visit https://errors.pydantic.dev/2.12/v/extra_forbidden\naction.0.WaitActionModel.wait\n  Field required [type=missing, input_value={'screenshot': {'_placeho...: 'request screenshot'}}, input_type=dict]\n    For further information visit https://errors.pydantic.dev/2.12/v/missing\naction.0.WaitActionModel.screenshot\n  Extra inputs are not permitted [type=extra_forbidden, input_value={'_placeholder': 'request screenshot'}, input_type=dict]\n    For further information visit https://errors.pydantic.dev/2.12/v/extra_forbidden\naction.0.ClickActionModel.click\n  Field required [type=missing, input_value={'screenshot': {'_placeho...: 'request screenshot'}}, input_type=dict]\n    For further information visit https://errors.pydantic.dev/2.12/v/missing\naction.0.ClickActionModel.screenshot\n  Extra inputs are not permitted [type=extra_forbidden, input_value={'_placeholder': 'request screenshot'}, input_type=dict]\n    For further information visit https://errors.pydantic.dev/2.12/v/extra_forbidden\naction.0.InputActionModel.input\n  Field required [type=missing, input_value={'screenshot': {'_placeho...: 'request screenshot'}}, input_type=dict]\n    For further information visit https://errors.pydantic.dev/2.12/v/missing\naction.0.InputActionModel.screenshot\n  Extra inputs are not permitted [type=extra_forbidden, input_value={'_placeholder': 'request screenshot'}, input_type=dict]\n    For further information visit https://errors.pydantic.dev/2.12/v/extra_forbidden\naction.0.UploadFileActionModel.upload_file\n  Field required [type=missing, input_value={'screenshot': {'_placeho...: 'request screenshot'}}, input_type=dict]\n    For further information visit https://errors.pydantic.dev/2.12/v/missing\naction.0.UploadFileActionModel.screenshot\n  Extra inputs are not permitted [type=extra_forbidden, input_value={'_placeholder': 'request screenshot'}, input_type=dict]\n    For further information visit https://errors.pydantic.dev/2.12/v/extra_forbidden\naction.0.SwitchActionModel.switch\n  Field required [type=missing, input_value={'screenshot': {'_placeho...: 'request screenshot'}}, input_type=dict]\n    For further information visit https://errors.pydantic.dev/2.12/v/missing\naction.0.SwitchActionModel.screenshot\n  Extra inputs are not permitted [type=extra_forbidden, input_value={'_placeholder': 'request screenshot'}, input_type=dict]\n    For further information visit https://errors.pydantic.dev/2.12/v/extra_forbidden\naction.0.CloseActionModel.close\n  Field required [type=missing, input_value={'screenshot': {'_placeho...: 'request screenshot'}}, input_type=dict]\n    For further information visit https://errors.pydantic.dev/2.12/v/missing\naction.0.CloseActionModel.screenshot\n  Extra inputs are not permitted [type=extra_forbidden, input_value={'_placeholder': 'request screenshot'}, input_type=dict]\n    For further information visit https://errors.pydantic.dev/2.12/v/extra_forbidden\naction.0.ExtractActionModel.extract\n  Field required [type=missing, input_value={'screenshot': {'_placeho...: 'request screenshot'}}, input_type=dict]\n    For further information visit https://errors.pydantic.dev/2.12/v/missing\naction.0.ExtractActionModel.screenshot\n  Extra inputs are not permitted [type=extra_forbidden, input_value={'_placeholder': 'request screenshot'}, input_type=dict]\n    For further information visit https://errors.pydantic.dev/2.12/v/extra_forbidden\naction.0.ScrollActionModel.scroll\n  Field required [type=missing, input_value={'screenshot': {'_placeho...: 'request screenshot'}}, input_type=dict]\n    For further information visit https://errors.pydantic.dev/2.12/v/missing\naction.0.ScrollActionModel.screenshot\n  Extra inputs are not permitted [type=extra_forbidden, input_value={'_placeholder': 'request screenshot'}, input_type=dict]\n    For further information visit https://errors.pydantic.dev/2.12/v/extra_forbidden\naction.0.SendKeysActionModel.send_keys\n  Field required [type=missing, input_value={'screenshot': {'_placeho...: 'request screenshot'}}, input_type=dict]\n    For further information visit https://errors.pydantic.dev/2.12/v/missing\naction.0.SendKeysActionModel.screenshot\n  Extra inputs are not permitted [type=extra_forbidden, input_value={'_placeholder': 'request screenshot'}, input_type=dict]\n    For further information visit https://errors.pydantic.dev/2.12/v/extra_forbidden\naction.0.FindTextActionModel.find_text\n  Field required [type=missing, input_value={'screenshot': {'_placeho...: 'request screenshot'}}, input_type=dict]\n    For further information visit https://errors.pydantic.dev/2.12/v/missing\naction.0.FindTextActionModel.screenshot\n  Extra inputs are not permitted [type=extra_forbidden, input_value={'_placeholder': 'request screenshot'}, input_type=dict]\n    For further information visit https://errors.pydantic.dev/2.12/v/extra_forbidden\naction.0.ScreenshotActionModel.screenshot._placeholder\n  Extra inputs are not permitted [type=extra_forbidden, input_value='request screenshot', input_type=str]\n    For further information visit https://errors.pydantic.dev/2.12/v/extra_forbidden\naction.0.DropdownOptionsActionModel.dropdown_options\n  Field required [type=missing, input_value={'screenshot': {'_placeho...: 'request screenshot'}}, input_type=dict]\n    For further information visit https://errors.pydantic.dev/2.12/v/missing\naction.0.DropdownOptionsActionModel.screenshot\n  Extra inputs are not permitted [type=extra_forbidden, input_value={'_placeholder': 'request screenshot'}, input_type=dict]\n    For further information visit https://errors.pydantic.dev/2.12/v/extra_forbidden\naction.0.SelectDropdownActionModel.select_dropdown\n  Field required [type=missing, input_value={'screenshot': {'_placeho...: 'request screenshot'}}, input_type=dict]\n    For further information visit https://errors.pydantic.dev/2.12/v/missing\naction.0.SelectDropdownActionModel.screenshot\n  Extra inputs are not permitted [type=extra_forbidden, input_value={'_placeholder': 'request screenshot'}, input_type=dict]\n    For further information visit https://errors.pydantic.dev/2.12/v/extra_forbidden\naction.0.WriteFileActionModel.write_file\n  Field required [type=missing, input_value={'screenshot': {'_placeho...: 'request screenshot'}}, input_type=dict]\n    For further information visit https://errors.pydantic.dev/2.12/v/missing\naction.0.WriteFileActionModel.screenshot\n  Extra inputs are not permitted [type=extra_forbidden, input_value={'_placeholder': 'request screenshot'}, input_type=dict]\n    For further information visit https://errors.pydantic.dev/2.12/v/extra_forbidden\naction.0.ReplaceFileActionModel.replace_file\n  Field required [type=missing, input_value={'screenshot': {'_placeho...: 'request screenshot'}}, input_type=dict]\n    For further information visit https://errors.pydantic.dev/2.12/v/missing\naction.0.ReplaceFileActionModel.screenshot\n  Extra inputs are not permitted [type=extra_forbidden, input_value={'_placeholder': 'request screenshot'}, input_type=dict]\n    For further information visit https://errors.pydantic.dev/2.12/v/extra_forbidden\naction.0.ReadFileActionModel.read_file\n  Field required [type=missing, input_value={'screenshot': {'_placeho...: 'request screenshot'}}, input_type=dict]\n    For further information visit https://errors.pydantic.dev/2.12/v/missing\naction.0.ReadFileActionModel.screenshot\n  Extra inputs are not permitted [type=extra_forbidden, input_value={'_placeholder': 'request screenshot'}, input_type=dict]\n    For further information visit https://errors.pydantic.dev/2.12/v/extra_forbidden\naction.0.EvaluateActionModel.evaluate\n  Field required [type=missing, input_value={'screenshot': {'_placeho...: 'request screenshot'}}, input_type=dict]\n    For further information visit https://errors.pydantic.dev/2.12/v/missing\naction.0.EvaluateActionModel.screenshot\n  Extra inputs are not permitted [type=extra_forbidden, input_value={'_placeholder': 'request screenshot'}, input_type=dict]\n    For further information visit https://errors.pydantic.dev/2.12/v/extra_forbidden", attachments=None, long_term_memory=None, extracted_content=None, include_extracted_content_only_once=False, metadata=None, include_in_memory=False)]</div>
+
+                            <div class="step-details"><strong>Model Output:</strong> thinking="The previous step successfully closed the cookie banner. Now I need to proceed with the hotel search. The first step in the user request is to input a destination name into the destination input box. I have identified the destination input field as index [682] with placeholder 'Destination...</div>
+
+                        </div>
+
+                        <div class="agent-step">
+                            <div class="step-header">
+                                <span class="step-number">Step 5</span>
+                                <span class="step-action">N/A</span>
+                            </div>
+
+                            <div class="step-details"><strong>Result:</strong> [ActionResult(is_done=False, success=None, error=None, attachments=None, long_term_memory=None, extracted_content='Clicked element', include_extracted_content_only_once=False, metadata={'click_x': 1500.09375, 'click_y': 284.0}, include_in_memory=False)]</div>
+
+                            <div class="step-details"><strong>Model Output:</strong> thinking="The previous step successfully entered 'Bangkok' into the destination input field. The browser state now shows a list of suggestions. The user request mandates clicking on the first suggestion. The first suggestion is element [3220] which shows 'Bangkok' and 'Bangkok Province, Thailand'. I...</div>
+
+                        </div>
+
+                        <div class="agent-step">
+                            <div class="step-header">
+                                <span class="step-number">Step 6</span>
+                                <span class="step-action">N/A</span>
+                            </div>
+
+                            <div class="step-details"><strong>Result:</strong> [ActionResult(is_done=False, success=None, error=None, attachments=None, long_term_memory=None, extracted_content='Clicked element', include_extracted_content_only_once=False, metadata=None, include_in_memory=False)]</div>
+
+                            <div class="step-details"><strong>Model Output:</strong> thinking="The previous steps successfully navigated to the page, closed the cookie banner, input 'Bangkok' into the destination field, and selected the first suggestion. The current state shows the search form ready with 'Bangkok' as the destination and default dates/guests. The next step according ...</div>
+
+                        </div>
+
+                        <div class="agent-step">
+                            <div class="step-header">
+                                <span class="step-number">Step 7</span>
+                                <span class="step-action">N/A</span>
+                            </div>
+
+                            <div class="step-details"><strong>Result:</strong> [ActionResult(is_done=False, success=None, error=None, attachments=None, long_term_memory='Waited for 5 seconds', extracted_content='Waited for 5 seconds', include_extracted_content_only_once=False, metadata=None, include_in_memory=False)]</div>
+
+                            <div class="step-details"><strong>Model Output:</strong> thinking="The previous action was clicking the 'Search' button, which initiated navigation to the hotel listing page. The current `browser_state` is empty, indicating the page is still loading or rendering. I need to wait for the page content to appear before proceeding to the next step, which is se...</div>
+
+                        </div>
+
+                        <div class="agent-step">
+                            <div class="step-header">
+                                <span class="step-number">Step 8</span>
+                                <span class="step-action">N/A</span>
+                            </div>
+
+                            <div class="step-details"><strong>Result:</strong> [ActionResult(is_done=False, success=None, error=None, attachments=None, long_term_memory='Scrolled down 2160px', extracted_content='🔍 Scrolled down 2160px', include_extracted_content_only_once=False, metadata=None, include_in_memory=False)]</div>
+
+                            <div class="step-details"><strong>Model Output:</strong> thinking='I have successfully navigated to the hotel search results page for Bangkok. My previous action was waiting for the page to load after clicking the search button. Now I need to find and click on a hotel card, as per the user request.\n\nLooking at the current `browser_state`, the interactiv...</div>
+
+                        </div>
+
+                        <div class="agent-step">
+                            <div class="step-header">
+                                <span class="step-number">Step 9</span>
+                                <span class="step-action">N/A</span>
+                            </div>
+
+                            <div class="step-details"><strong>Result:</strong> [ActionResult(is_done=False, success=None, error=None, attachments=None, long_term_memory=None, extracted_content='Clicked element', include_extracted_content_only_once=False, metadata={'click_x': 2065.5, 'click_y': 1080.28125}, include_in_memory=False)]</div>
+
+                            <div class="step-details"><strong>Model Output:</strong> thinking="I have successfully searched for hotels in Bangkok and scrolled down to view the listings. The next step, according to the user request, is to 'randomly click on any hotel card'. I will attempt to click the main container div of the first hotel listing, which is index [8600], assuming it's...</div>
+
+                        </div>
+
+                        <div class="agent-step">
+                            <div class="step-header">
+                                <span class="step-number">Step 10</span>
+                                <span class="step-action">N/A</span>
+                            </div>
+
+                            <div class="step-details"><strong>Result:</strong> [ActionResult(is_done=False, success=None, error=None, attachments=None, long_term_memory=None, extracted_content='Clicked element', include_extracted_content_only_once=False, metadata={'click_x': 2065.5, 'click_y': 736.96875}, include_in_memory=False)]</div>
+
+                            <div class="step-details"><strong>Model Output:</strong> thinking="The previous step's action was clicking on a hotel card ([8600]), but the browser state indicates I am still on the hotel search results page. This suggests the click either failed or the navigation is still pending. Since the goal is to proceed to the hotel detail page, I will attempt to ...</div>
+
+                        </div>
+
+                        <div class="agent-step">
+                            <div class="step-header">
+                                <span class="step-number">Step 11</span>
+                                <span class="step-action">N/A</span>
+                            </div>
+
+                            <div class="step-details"><strong>Result:</strong> [ActionResult(is_done=False, success=None, error=None, attachments=None, long_term_memory='Switched to tab #0E6D', extracted_content='Switched to tab #0E6D', include_extracted_content_only_once=False, metadata=None, include_in_memory=False)]</div>
+
+                            <div class="step-details"><strong>Model Output:</strong> thinking="My last action was clicking on a hotel card ([8510]), which seems to have opened a new tab (0E6D) for a hotel detail page, although the hotel name in the tab title ('First Pride Hotel Bangkok') doesn't match the one I clicked ('Asia Hotel Bangkok'). Regardless, I need to proceed to the hot...</div>
+
+                        </div>
+
+                        <div class="agent-step">
+                            <div class="step-header">
+                                <span class="step-number">Step 12</span>
+                                <span class="step-action">N/A</span>
+                            </div>
+
+                            <div class="step-details"><strong>Result:</strong> [ActionResult(is_done=False, success=None, error=None, attachments=None, long_term_memory='Scrolled down 3.0 pages', extracted_content='🔍 Scrolled down 3.0 pages', include_extracted_content_only_once=False, metadata=None, include_in_memory=False)]</div>
+
+                            <div class="step-details"><strong>Model Output:</strong> thinking='I have successfully navigated to the hotel detail page in the new tab (0E6D). The next steps are to find the room selection section, select a room, fill in guest details, and proceed to the payment page.\n\nSince the page has 3.3 pages below the current viewport, I need to scroll down to f...</div>
+
+                        </div>
+
+                        <div class="agent-step">
+                            <div class="step-header">
+                                <span class="step-number">Step 13</span>
+                                <span class="step-action">N/A</span>
+                            </div>
+
+                            <div class="step-details"><strong>Result:</strong> [ActionResult(is_done=False, success=None, error=None, attachments=None, long_term_memory=None, extracted_content='Clicked element', include_extracted_content_only_once=False, metadata={'click_x': 528.25, 'click_y': 237.90625}, include_in_memory=False)]</div>
+
+                            <div class="step-details"><strong>Model Output:</strong> thinking="I have successfully navigated to the hotel detail page and scrolled down to the room selection section. The next required step is to 'Scroll down to room section and click on any random room'. I see two 'Book now' links, which correspond to selecting a room. I will click the first 'Book no...</div>
+
+                        </div>
+
+                        <div class="agent-step">
+                            <div class="step-header">
+                                <span class="step-number">Step 14</span>
+                                <span class="step-action">N/A</span>
+                            </div>
+
+                            <div class="step-details"><strong>Result:</strong> [ActionResult(is_done=False, success=None, error=None, attachments=None, long_term_memory=None, extracted_content='Clicked element', include_extracted_content_only_once=False, metadata=None, include_in_memory=False)]</div>
+
+                            <div class="step-details"><strong>Model Output:</strong> thinking="The previous step (Step 12) was to click a 'Book now' link ([11824]), but the browser state indicates I am still on the hotel detail page (URL unchanged), and new 'Book now' links ([11825], [11826], [11827]) are visible. This suggests the previous click either failed to navigate or the pag...</div>
+
+                        </div>
+
+                        <div class="agent-step">
+                            <div class="step-header">
+                                <span class="step-number">Step 15</span>
+                                <span class="step-action">N/A</span>
+                            </div>
+
+                            <div class="step-details"><strong>Result:</strong> [ActionResult(is_done=False, success=None, error=None, attachments=None, long_term_memory="Input 'John' into element 12290.", extracted_content="Input 'John' into element 12290.", include_extracted_content_only_once=False, metadata={'input_x': 365.5, 'input_y': 237.8125}, include_in_memory=False), ActionResult(is_done=False, success=None, error=None, attachments=None, long_term_memory="Input 'Doe' into element 12297.", extracted_content="Input 'Doe' into element 12297.", include_extracted_content_only_once=False, metadata={'input_x': 365.5, 'input_y': 303.8125}, include_in_memory=False), ActionResult(is_done=False, success=None, error=None, attachments=None, long_term_memory=None, extracted_content='Clicked element', include_extracted_content_only_once=False, metadata={'click_x': 364.5, 'click_y': 435.0}, include_in_memory=False)]</div>
+
+                            <div class="step-details"><strong>Model Output:</strong> thinking="I have successfully navigated to the 'Hotel Guest Details' page. The next steps are to fill in the guest details and click the 'Continue' button to reach the payment page, as per the user request.\nI have identified the input fields for 'Given name' [12290] and 'Family name/Surname' [12297...</div>
+
+                        </div>
+
+                        <div class="agent-step">
+                            <div class="step-header">
+                                <span class="step-number">Step 16</span>
+                                <span class="step-action">N/A</span>
+                            </div>
+
+                            <div class="step-details"><strong>Result:</strong> [ActionResult(is_done=False, success=None, error=None, attachments=None, long_term_memory=None, extracted_content='Clicked element', include_extracted_content_only_once=False, metadata={'click_x': 364.5, 'click_y': 435.0}, include_in_memory=False)]</div>
+
+                            <div class="step-details"><strong>Model Output:</strong> thinking="In the previous step, I filled in the 'Given name' and 'Family name/Surname' fields and attempted to click the 'Continue' button [12220]. However, the current page URL indicates I am still on the 'Hotel Guest Details' page, meaning the navigation to the payment page failed. This usually ha...</div>
+
+                        </div>
+
+                        <div class="agent-step">
+                            <div class="step-header">
+                                <span class="step-number">Step 17</span>
+                                <span class="step-action">N/A</span>
+                            </div>
+
+                            <div class="step-details"><strong>Result:</strong> [ActionResult(is_done=False, success=None, error=None, attachments=None, long_term_memory='Scrolled down 475px', extracted_content='🔍 Scrolled down 475px', include_extracted_content_only_once=False, metadata=None, include_in_memory=False)]</div>
+
+                            <div class="step-details"><strong>Model Output:</strong> thinking="I have successfully navigated to the 'Hotel Guest Details' page, filled in the guest name, and attempted to click the 'Continue' button [12220] twice, but the page failed to advance to the payment page. I suspect there might be unfulfilled required fields or a checkbox off-screen. The curr...</div>
+
+                        </div>
+
+                        <div class="agent-step">
+                            <div class="step-header">
+                                <span class="step-number">Step 18</span>
+                                <span class="step-action">N/A</span>
+                            </div>
+
+                            <div class="step-details"><strong>Result:</strong> [ActionResult(is_done=False, success=None, error=None, attachments=None, long_term_memory=None, extracted_content='Clicked element', include_extracted_content_only_once=False, metadata={'click_x': 364.5, 'click_y': 435.0}, include_in_memory=False)]</div>
+
+                            <div class="step-details"><strong>Model Output:</strong> thinking="I have successfully filled in the guest details ('John Doe') but failed twice to proceed to the payment page by clicking the 'Continue' button [12220]. In the previous step, I scrolled down to reveal any hidden mandatory fields. The scroll revealed the 'Nationality/Region' section, which c...</div>
+
+                        </div>
+
+                        <div class="agent-step">
+                            <div class="step-header">
+                                <span class="step-number">Step 19</span>
+                                <span class="step-action">N/A</span>
+                            </div>
+
+                            <div class="step-details"><strong>Result:</strong> [ActionResult(is_done=False, success=None, error=None, attachments=None, long_term_memory='Scrolled down 475px', extracted_content='🔍 Scrolled down 475px', include_extracted_content_only_once=False, metadata=None, include_in_memory=False)]</div>
+
+                            <div class="step-details"><strong>Model Output:</strong> thinking="The previous steps successfully navigated to the guest details page and filled in the required names, 'John Doe'. However, clicking the 'Continue' button [12220] three times failed to proceed to the payment page. I previously scrolled down by 1 page, which revealed the 'Nationality/Region'...</div>
+
+                        </div>
+
+                        <div class="agent-step">
+                            <div class="step-header">
+                                <span class="step-number">Step 20</span>
+                                <span class="step-action">N/A</span>
+                            </div>
+
+                            <div class="step-details"><strong>Result:</strong> [ActionResult(is_done=False, success=None, error=None, attachments=None, long_term_memory="Input 'test@example.com' into element 14052.", extracted_content="Input 'test@example.com' into element 14052.", include_extracted_content_only_once=False, metadata={'input_x': 345.5, 'input_y': 237.15625}, include_in_memory=False), ActionResult(is_done=False, success=None, error=None, attachments=None, long_term_memory=None, extracted_content='Clicked element', include_extracted_content_only_once=False, metadata={'click_x': 364.5, 'click_y': 435.0}, include_in_memory=False)]</div>
+
+                            <div class="step-details"><strong>Model Output:</strong> thinking="I am currently stuck on the 'Hotel Guest Details' page, despite having filled in the required guest names and scrolling to ensure all content is visible. Previous attempts to click the 'Continue' button [12220] failed, suggesting a missing mandatory field or validation issue. I have scroll...</div>
+
+                        </div>
+
+                        <div class="agent-step">
+                            <div class="step-header">
+                                <span class="step-number">Step 21</span>
+                                <span class="step-action">N/A</span>
+                            </div>
+
+                            <div class="step-details"><strong>Result:</strong> [ActionResult(is_done=False, success=None, error=None, attachments=None, long_term_memory=None, extracted_content='Clicked element', include_extracted_content_only_once=False, metadata=None, include_in_memory=False)]</div>
+
+                            <div class="step-details"><strong>Model Output:</strong> thinking="I am currently stuck on the 'Hotel Guest Details' page as the 'Continue' button [12220] is not proceeding to the payment page, despite filling in the name and email fields. I have scrolled down and attempted to click 'Continue' multiple times. The next likely mandatory field is 'Nationalit...</div>
+
+                        </div>
+
+                        <div class="agent-step">
+                            <div class="step-header">
+                                <span class="step-number">Step 22</span>
+                                <span class="step-action">N/A</span>
+                            </div>
+
+                            <div class="step-details"><strong>Result:</strong> [ActionResult(is_done=False, success=None, error='Error executing action dropdown_options: Element and its children (depth 4) are not recognizable dropdown types (tag: SPAN, role: null, classes: )', attachments=None, long_term_memory=None, extracted_content=None, include_extracted_content_only_once=False, metadata=None, include_in_memory=False)]</div>
+
+                            <div class="step-details"><strong>Model Output:</strong> thinking="I have successfully navigated to the Hotel Guest Details page and filled in the name and email. I am currently stuck because the 'Continue' button is blocked, likely due to a mandatory field not being fully selected. My last action was clicking the Nationality/Region field trigger [12311]....</div>
+
+                        </div>
+
+                        <div class="agent-step">
+                            <div class="step-header">
+                                <span class="step-number">Step 23</span>
+                                <span class="step-action">N/A</span>
+                            </div>
+
+                            <div class="step-details"><strong>Result:</strong> [ActionResult(is_done=False, success=None, error=None, attachments=None, long_term_memory='Scrolled down 10.0 pages', extracted_content='🔍 Scrolled down 10.0 pages', include_extracted_content_only_once=False, metadata=None, include_in_memory=False)]</div>
+
+                            <div class="step-details"><strong>Model Output:</strong> thinking="I am stuck on the guest details page, unable to proceed to the payment page by clicking the 'Continue' button [12220]. I have filled in the guest name and email. My previous attempt to interact with the 'Nationality/Region' field [12311] failed to open a standard dropdown, and the `dropdow...</div>
+
+                        </div>
+
+                        <div class="agent-step">
+                            <div class="step-header">
+                                <span class="step-number">Step 24</span>
+                                <span class="step-action">N/A</span>
+                            </div>
+
+                            <div class="step-details"><strong>Result:</strong> [ActionResult(is_done=False, success=None, error=None, attachments=None, long_term_memory=None, extracted_content='Clicked element', include_extracted_content_only_once=False, metadata=None, include_in_memory=False)]</div>
+
+                            <div class="step-details"><strong>Model Output:</strong> thinking="I am currently stuck on the 'Hotel Guest Details' page, unable to proceed to the payment page because the 'Continue' button [12220] is blocked, likely due to a mandatory field not being properly selected. I have filled in the name and email, and scrolled the entire page. The most probable ...</div>
+
+                        </div>
+
+                        <div class="agent-step">
+                            <div class="step-header">
+                                <span class="step-number">Step 25</span>
+                                <span class="step-action">N/A</span>
+                            </div>
+
+                            <div class="step-details"><strong>Result:</strong> [ActionResult(is_done=False, success=None, error=None, attachments=None, long_term_memory='Scrolled up 475px', extracted_content='🔍 Scrolled up 475px', include_extracted_content_only_once=False, metadata=None, include_in_memory=False)]</div>
+
+                            <div class="step-details"><strong>Model Output:</strong> thinking="I have successfully navigated to the guest details page and filled in the required name and email. I am currently blocked from proceeding to the payment page, likely due to an issue with the Nationality/Region selection, even though 'India' appears to be selected.\nMy last action was click...</div>
+
+                        </div>
+
+                        <div class="agent-step">
+                            <div class="step-header">
+                                <span class="step-number">Step 26</span>
+                                <span class="step-action">N/A</span>
+                            </div>
+
+                            <div class="step-details"><strong>Result:</strong> [ActionResult(is_done=False, success=None, error=None, attachments=None, long_term_memory=None, extracted_content='Clicked element', include_extracted_content_only_once=False, metadata=None, include_in_memory=False), ActionResult(is_done=False, success=None, error=None, attachments=None, long_term_memory=None, extracted_content='Clicked element', include_extracted_content_only_once=False, metadata={'click_x': 364.5, 'click_y': 435.0}, include_in_memory=False)]</div>
+
+                            <div class="step-details"><strong>Model Output:</strong> thinking="I am currently stuck on the 'Hotel Guest Details' page, unable to proceed to the payment page because the 'Continue' button [12220] is blocked. I have filled in the guest name and email. The likely blocker is the 'Nationality/Region' field, which displays 'India' but is not a standard drop...</div>
+
+                        </div>
+
+                        <div class="agent-step">
+                            <div class="step-header">
+                                <span class="step-number">Step 27</span>
+                                <span class="step-action">N/A</span>
+                            </div>
+
+                            <div class="step-details"><strong>Result:</strong> [ActionResult(is_done=False, success=None, error=None, attachments=None, long_term_memory=None, extracted_content='Clicked element', include_extracted_content_only_once=False, metadata={'click_x': 684.0, 'click_y': 237.15625}, include_in_memory=False)]</div>
+
+                            <div class="step-details"><strong>Model Output:</strong> thinking="I am currently stuck on the 'Hotel Guest Details' page. I have filled in the guest's name and email, but the 'Continue' button [12220] is blocked. I have tried clicking 'Continue' multiple times, scrolling to find hidden fields, and interacting with the 'Nationality/Region' selector, all w...</div>
+
+                        </div>
+
+                        <div class="agent-step">
+                            <div class="step-header">
+                                <span class="step-number">Step 28</span>
+                                <span class="step-action">N/A</span>
+                            </div>
+
+                            <div class="step-details"><strong>Result:</strong> [ActionResult(is_done=False, success=None, error=None, attachments=None, long_term_memory="Input 'test@example.com' into element 14177.", extracted_content="Input 'test@example.com' into element 14177.", include_extracted_content_only_once=False, metadata={'input_x': 365.5, 'input_y': 249.0}, include_in_memory=False), ActionResult(is_done=False, success=None, error=None, attachments=None, long_term_memory="Input '1234567890' into element 15145.", extracted_content="Input '1234567890' into element 15145.", include_extracted_content_only_once=False, metadata={'input_x': 439.5, 'input_y': 315.0}, include_in_memory=False), ActionResult(is_done=False, success=None, error=None, attachments=None, long_term_memory=None, extracted_content='Clicked element', include_extracted_content_only_once=False, metadata={'click_x': 541.75, 'click_y': 435.0}, include_in_memory=False)]</div>
+
+                            <div class="step-details"><strong>Model Output:</strong> thinking="I am currently stuck on the guest details page, unable to click the main 'Continue' button. My last action opened a 'Who's booking?' modal/dialog box, which is likely a mandatory step. I need to fill in the required details within this modal and click 'Done' to close it and unblock the mai...</div>
+
+                        </div>
+
+                        <div class="agent-step">
+                            <div class="step-header">
+                                <span class="step-number">Step 29</span>
+                                <span class="step-action">N/A</span>
+                            </div>
+
+                            <div class="step-details"><strong>Result:</strong> [ActionResult(is_done=False, success=None, error=None, attachments=None, long_term_memory=None, extracted_content='Clicked element', include_extracted_content_only_once=False, metadata={'click_x': 364.5, 'click_y': 435.0}, include_in_memory=False)]</div>
+
+                            <div class="step-details"><strong>Model Output:</strong> thinking="I have successfully filled in the guest details ('John Doe') and the booker details ('test@example.com' and a mobile number) in the previous steps. The 'Who's booking?' modal is now closed, and the information is updated on the main guest details page. The primary blocker for proceeding to...</div>
+
+                        </div>
+
+                        <div class="agent-step">
+                            <div class="step-header">
+                                <span class="step-number">Step 30</span>
+                                <span class="step-action">N/A</span>
+                            </div>
+
+                            <div class="step-details"><strong>Result:</strong> [ActionResult(is_done=False, success=None, error="41 validation errors for AgentOutput\naction.0.DoneActionModel.done\n  Field required [type=missing, input_value={'screenshot': {'_placeho...o view dialog content'}}, input_type=dict]\n    For further information visit https://errors.pydantic.dev/2.12/v/missing\naction.0.DoneActionModel.screenshot\n  Extra inputs are not permitted [type=extra_forbidden, input_value={'_placeholder': 'request...to view dialog content'}, input_type=dict]\n    For further information visit https://errors.pydantic.dev/2.12/v/extra_forbidden\naction.0.SearchActionModel.search\n  Field required [type=missing, input_value={'screenshot': {'_placeho...o view dialog content'}}, input_type=dict]\n    For further information visit https://errors.pydantic.dev/2.12/v/missing\naction.0.SearchActionModel.screenshot\n  Extra inputs are not permitted [type=extra_forbidden, input_value={'_placeholder': 'request...to view dialog content'}, input_type=dict]\n    For further information visit https://errors.pydantic.dev/2.12/v/extra_forbidden\naction.0.NavigateActionModel.navigate\n  Field required [type=missing, input_value={'screenshot': {'_placeho...o view dialog content'}}, input_type=dict]\n    For further information visit https://errors.pydantic.dev/2.12/v/missing\naction.0.NavigateActionModel.screenshot\n  Extra inputs are not permitted [type=extra_forbidden, input_value={'_placeholder': 'request...to view dialog content'}, input_type=dict]\n    For further information visit https://errors.pydantic.dev/2.12/v/extra_forbidden\naction.0.GoBackActionModel.go_back\n  Field required [type=missing, input_value={'screenshot': {'_placeho...o view dialog content'}}, input_type=dict]\n    For further information visit https://errors.pydantic.dev/2.12/v/missing\naction.0.GoBackActionModel.screenshot\n  Extra inputs are not permitted [type=extra_forbidden, input_value={'_placeholder': 'request...to view dialog content'}, input_type=dict]\n    For further information visit https://errors.pydantic.dev/2.12/v/extra_forbidden\naction.0.WaitActionModel.wait\n  Field required [type=missing, input_value={'screenshot': {'_placeho...o view dialog content'}}, input_type=dict]\n    For further information visit https://errors.pydantic.dev/2.12/v/missing\naction.0.WaitActionModel.screenshot\n  Extra inputs are not permitted [type=extra_forbidden, input_value={'_placeholder': 'request...to view dialog content'}, input_type=dict]\n    For further information visit https://errors.pydantic.dev/2.12/v/extra_forbidden\naction.0.ClickActionModel.click\n  Field required [type=missing, input_value={'screenshot': {'_placeho...o view dialog content'}}, input_type=dict]\n    For further information visit https://errors.pydantic.dev/2.12/v/missing\naction.0.ClickActionModel.screenshot\n  Extra inputs are not permitted [type=extra_forbidden, input_value={'_placeholder': 'request...to view dialog content'}, input_type=dict]\n    For further information visit https://errors.pydantic.dev/2.12/v/extra_forbidden\naction.0.InputActionModel.input\n  Field required [type=missing, input_value={'screenshot': {'_placeho...o view dialog content'}}, input_type=dict]\n    For further information visit https://errors.pydantic.dev/2.12/v/missing\naction.0.InputActionModel.screenshot\n  Extra inputs are not permitted [type=extra_forbidden, input_value={'_placeholder': 'request...to view dialog content'}, input_type=dict]\n    For further information visit https://errors.pydantic.dev/2.12/v/extra_forbidden\naction.0.UploadFileActionModel.upload_file\n  Field required [type=missing, input_value={'screenshot': {'_placeho...o view dialog content'}}, input_type=dict]\n    For further information visit https://errors.pydantic.dev/2.12/v/missing\naction.0.UploadFileActionModel.screenshot\n  Extra inputs are not permitted [type=extra_forbidden, input_value={'_placeholder': 'request...to view dialog content'}, input_type=dict]\n    For further information visit https://errors.pydantic.dev/2.12/v/extra_forbidden\naction.0.SwitchActionModel.switch\n  Field required [type=missing, input_value={'screenshot': {'_placeho...o view dialog content'}}, input_type=dict]\n    For further information visit https://errors.pydantic.dev/2.12/v/missing\naction.0.SwitchActionModel.screenshot\n  Extra inputs are not permitted [type=extra_forbidden, input_value={'_placeholder': 'request...to view dialog content'}, input_type=dict]\n    For further information visit https://errors.pydantic.dev/2.12/v/extra_forbidden\naction.0.CloseActionModel.close\n  Field required [type=missing, input_value={'screenshot': {'_placeho...o view dialog content'}}, input_type=dict]\n    For further information visit https://errors.pydantic.dev/2.12/v/missing\naction.0.CloseActionModel.screenshot\n  Extra inputs are not permitted [type=extra_forbidden, input_value={'_placeholder': 'request...to view dialog content'}, input_type=dict]\n    For further information visit https://errors.pydantic.dev/2.12/v/extra_forbidden\naction.0.ExtractActionModel.extract\n  Field required [type=missing, input_value={'screenshot': {'_placeho...o view dialog content'}}, input_type=dict]\n    For further information visit https://errors.pydantic.dev/2.12/v/missing\naction.0.ExtractActionModel.screenshot\n  Extra inputs are not permitted [type=extra_forbidden, input_value={'_placeholder': 'request...to view dialog content'}, input_type=dict]\n    For further information visit https://errors.pydantic.dev/2.12/v/extra_forbidden\naction.0.ScrollActionModel.scroll\n  Field required [type=missing, input_value={'screenshot': {'_placeho...o view dialog content'}}, input_type=dict]\n    For further information visit https://errors.pydantic.dev/2.12/v/missing\naction.0.ScrollActionModel.screenshot\n  Extra inputs are not permitted [type=extra_forbidden, input_value={'_placeholder': 'request...to view dialog content'}, input_type=dict]\n    For further information visit https://errors.pydantic.dev/2.12/v/extra_forbidden\naction.0.SendKeysActionModel.send_keys\n  Field required [type=missing, input_value={'screenshot': {'_placeho...o view dialog content'}}, input_type=dict]\n    For further information visit https://errors.pydantic.dev/2.12/v/missing\naction.0.SendKeysActionModel.screenshot\n  Extra inputs are not permitted [type=extra_forbidden, input_value={'_placeholder': 'request...to view dialog content'}, input_type=dict]\n    For further information visit https://errors.pydantic.dev/2.12/v/extra_forbidden\naction.0.FindTextActionModel.find_text\n  Field required [type=missing, input_value={'screenshot': {'_placeho...o view dialog content'}}, input_type=dict]\n    For further information visit https://errors.pydantic.dev/2.12/v/missing\naction.0.FindTextActionModel.screenshot\n  Extra inputs are not permitted [type=extra_forbidden, input_value={'_placeholder': 'request...to view dialog content'}, input_type=dict]\n    For further information visit https://errors.pydantic.dev/2.12/v/extra_forbidden\naction.0.ScreenshotActionModel.screenshot._placeholder\n  Extra inputs are not permitted [type=extra_forbidden, input_value='requesting screenshot to view dialog content', input_type=str]\n    For further information visit https://errors.pydantic.dev/2.12/v/extra_forbidden\naction.0.DropdownOptionsActionModel.dropdown_options\n  Field required [type=missing, input_value={'screenshot': {'_placeho...o view dialog content'}}, input_type=dict]\n    For further information visit https://errors.pydantic.dev/2.12/v/missing\naction.0.DropdownOptionsActionModel.screenshot\n  Extra inputs are not permitted [type=extra_forbidden, input_value={'_placeholder': 'request...to view dialog content'}, input_type=dict]\n    For further information visit https://errors.pydantic.dev/2.12/v/extra_forbidden\naction.0.SelectDropdownActionModel.select_dropdown\n  Field required [type=missing, input_value={'screenshot': {'_placeho...o view dialog content'}}, input_type=dict]\n    For further information visit https://errors.pydantic.dev/2.12/v/missing\naction.0.SelectDropdownActionModel.screenshot\n  Extra inputs are not permitted [type=extra_forbidden, input_value={'_placeholder': 'request...to view dialog content'}, input_type=dict]\n    For further information visit https://errors.pydantic.dev/2.12/v/extra_forbidden\naction.0.WriteFileActionModel.write_file\n  Field required [type=missing, input_value={'screenshot': {'_placeho...o view dialog content'}}, input_type=dict]\n    For further information visit https://errors.pydantic.dev/2.12/v/missing\naction.0.WriteFileActionModel.screenshot\n  Extra inputs are not permitted [type=extra_forbidden, input_value={'_placeholder': 'request...to view dialog content'}, input_type=dict]\n    For further information visit https://errors.pydantic.dev/2.12/v/extra_forbidden\naction.0.ReplaceFileActionModel.replace_file\n  Field required [type=missing, input_value={'screenshot': {'_placeho...o view dialog content'}}, input_type=dict]\n    For further information visit https://errors.pydantic.dev/2.12/v/missing\naction.0.ReplaceFileActionModel.screenshot\n  Extra inputs are not permitted [type=extra_forbidden, input_value={'_placeholder': 'request...to view dialog content'}, input_type=dict]\n    For further information visit https://errors.pydantic.dev/2.12/v/extra_forbidden\naction.0.ReadFileActionModel.read_file\n  Field required [type=missing, input_value={'screenshot': {'_placeho...o view dialog content'}}, input_type=dict]\n    For further information visit https://errors.pydantic.dev/2.12/v/missing\naction.0.ReadFileActionModel.screenshot\n  Extra inputs are not permitted [type=extra_forbidden, input_value={'_placeholder': 'request...to view dialog content'}, input_type=dict]\n    For further information visit https://errors.pydantic.dev/2.12/v/extra_forbidden\naction.0.EvaluateActionModel.evaluate\n  Field required [type=missing, input_value={'screenshot': {'_placeho...o view dialog content'}}, input_type=dict]\n    For further information visit https://errors.pydantic.dev/2.12/v/missing\naction.0.EvaluateActionModel.screenshot\n  Extra inputs are not permitted [type=extra_forbidden, input_value={'_placeholder': 'request...to view dialog content'}, input_type=dict]\n    For further information visit https://errors.pydantic.dev/2.12/v/extra_forbidden", attachments=None, long_term_memory=None, extracted_content=None, include_extracted_content_only_once=False, metadata=None, include_in_memory=False)]</div>
+
+                            <div class="step-details"><strong>Model Output:</strong> thinking="I have successfully filled in the guest details ('John Doe') and the booker details ('test@example.com' and a mobile number) in the previous steps. The 'Who's booking?' modal is now closed, and the information is updated on the main guest details page. The primary blocker for proceeding to...</div>
+
+                        </div>
+
+                        <div class="agent-step">
+                            <div class="step-header">
+                                <span class="step-number">Step 31</span>
+                                <span class="step-action">N/A</span>
+                            </div>
+
+                            <div class="step-details"><strong>Result:</strong> [ActionResult(is_done=True, success=True, error=None, attachments=[], long_term_memory='Task completed: True - Successfully performed all requested steps and navigated to the payment page for a single room searc - 168 more characters', extracted_content="Successfully performed all requested steps and navigated to the payment page for a single room search in Bangkok. \n\n**Current Status:** Landed on the payment page (URL: https://cashier.airasia.com/payment...). The page displays 'Secure Checkout' and 'Payment details'.", include_extracted_content_only_once=False, metadata=None, include_in_memory=False)]</div>
+
+                            <div class="step-details"><strong>Model Output:</strong> thinking="The previous steps indicate a successful navigation to the payment page, despite some intermediate failures in clicking the 'Continue' button on the guest details page. The current URL is a 'cashier.airasia.com/payment' URL, and the page content clearly shows 'Secure Checkout' and 'Payment...</div>
+
+                        </div>
+
+                    </div>
+
+                    <div class="logs-section">
+                        <h4>📄 Execution Logs</h4>
+
+                        <div class="log-entry">[20:42:07] Test execution started</div>
+
+                        <div class="log-entry">[20:42:07] Scenario: Hotel E2E test for single room</div>
+
+                        <div class="log-entry">[20:42:07] Category: Hotels</div>
+
+                        <div class="log-entry">[20:42:07] Priority: High</div>
+
+                        <div class="log-entry">[20:42:07] Step 1: N/A</div>
+
+                        <div class="log-entry">[20:42:07] Step 2: N/A</div>
+
+                        <div class="log-entry">[20:42:07] Step 3: N/A</div>
+
+                        <div class="log-entry">[20:42:07] Step 4: N/A</div>
+
+                        <div class="log-entry">[20:42:07] Step 5: N/A</div>
+
+                        <div class="log-entry">[20:42:07] Step 6: N/A</div>
+
+                        <div class="log-entry">[20:42:07] Step 7: N/A</div>
+
+                        <div class="log-entry">[20:42:07] Step 8: N/A</div>
+
+                        <div class="log-entry">[20:42:07] Step 9: N/A</div>
+
+                        <div class="log-entry">[20:42:07] Step 10: N/A</div>
+
+                        <div class="log-entry">[20:42:07] Step 11: N/A</div>
+
+                        <div class="log-entry">[20:42:07] Step 12: N/A</div>
+
+                        <div class="log-entry">[20:42:07] Step 13: N/A</div>
+
+                        <div class="log-entry">[20:42:07] Step 14: N/A</div>
+
+                        <div class="log-entry">[20:42:07] Step 15: N/A</div>
+
+                        <div class="log-entry">[20:42:07] Step 16: N/A</div>
+
+                        <div class="log-entry">[20:42:07] Step 17: N/A</div>
+
+                        <div class="log-entry">[20:42:07] Step 18: N/A</div>
+
+                        <div class="log-entry">[20:42:07] Step 19: N/A</div>
+
+                        <div class="log-entry">[20:42:07] Step 20: N/A</div>
+
+                        <div class="log-entry">[20:42:07] Step 21: N/A</div>
+
+                        <div class="log-entry">[20:42:07] Step 22: N/A</div>
+
+                        <div class="log-entry">[20:42:07] Step 23: N/A</div>
+
+                        <div class="log-entry">[20:42:07] Step 24: N/A</div>
+
+                        <div class="log-entry">[20:42:07] Step 25: N/A</div>
+
+                        <div class="log-entry">[20:42:07] Step 26: N/A</div>
+
+                        <div class="log-entry">[20:42:07] Step 27: N/A</div>
+
+                        <div class="log-entry">[20:42:07] Step 28: N/A</div>
+
+                        <div class="log-entry">[20:42:07] Step 29: N/A</div>
+
+                        <div class="log-entry">[20:42:07] Step 30: N/A</div>
+
+                        <div class="log-entry">[20:42:07] Step 31: N/A</div>
+
+                        <div class="log-entry">[20:49:13] Test execution completed</div>
+
+                        <div class="log-entry">[20:49:13] Duration: 426.11 seconds</div>
+
+                        <div class="log-entry">[20:49:13] Status: PASSED</div>
+
+                    </div>
+
+                </div>
+            </div>
+
+        </div>
+        
+        <div class="footer">
+            <p>Report generated by Browser Automation Framework</p>
+            <p style="margin-top: 10px; font-size: 0.9em;">
+                Execution Mode: SEQUENTIAL | 
+                Total Duration: Check individual test logs
+            </p>
+        </div>
+    </div>
+    
+    <script>
+        function toggleDetails(header) {
+            const card = header.parentElement;
+            const details = card.querySelector('.test-details');
+            const icon = card.querySelector('.expand-icon');
+            
+            details.classList.toggle('expanded');
+            card.classList.toggle('expanded');
+        }
+        
+        // Auto-expand failed tests
+        document.addEventListener('DOMContentLoaded', function() {
+            const failedCards = document.querySelectorAll('.test-card.failed');
+            failedCards.forEach(card => {
+                const header = card.querySelector('.test-header');
+                if (header) {
+                    toggleDetails(header);
+                }
+            });
+        });
+    </script>
+</body>
+</html>

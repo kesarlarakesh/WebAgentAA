@@ -5,14 +5,15 @@ from sheets_reader import get_all_tasks
 from task_runner_utils import run_task, print_summary
 from report_generator import generate_html_report, save_report_index
 import os
+import config
 
 load_dotenv()
 
 async def main():
     llm = get_llm()
     
-    # Read configuration from .env
-    spreadsheet_id = os.getenv('SPREADSHEET_ID')
+    # Read configuration from config.py (which reads from .env with defaults)
+    spreadsheet_id = config.SPREADSHEET_ID
     
     if spreadsheet_id:
         # Get first active task from Google Sheets (reads sheet_name and start_row from .env)

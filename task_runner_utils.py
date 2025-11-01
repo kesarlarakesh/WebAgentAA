@@ -4,6 +4,7 @@ Common utilities for running browser automation tasks
 import asyncio
 import os
 from browser_use import Agent, Browser
+import config
 
 
 async def run_task(llm, task_info, task_number):
@@ -31,8 +32,8 @@ async def run_task(llm, task_info, task_number):
     agent_steps = []
     
     try:
-        # Get browser configuration
-        headless = os.getenv('HEADLESS_BROWSER', 'false').lower() == 'true'
+        # Get browser configuration from config.py
+        headless = config.HEADLESS_BROWSER
         
         # Create browser instance with configuration
         browser = Browser(headless=headless)
@@ -158,9 +159,8 @@ async def run_tasks_parallel(llm, tasks):
     Returns:
         list: List of result dictionaries
     """
-    # Get max parallel agents configuration
-    max_parallel = os.getenv('MAX_PARALLEL_AGENTS', '0')
-    max_parallel = int(max_parallel) if max_parallel.isdigit() else 0
+    # Get max parallel agents configuration from config.py
+    max_parallel = config.MAX_PARALLEL_AGENTS
     
     # If 0 or not set, run all tasks at once (unlimited)
     if max_parallel == 0 or max_parallel >= len(tasks):

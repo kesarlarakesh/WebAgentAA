@@ -39,26 +39,35 @@ AI-powered browser automation framework using Google Gemini and browser-use libr
    playwright install chromium
    ```
 
-4. **Configure environment variables**
+4. **Configure the application**
    
-   Create a `.env` file in the project root:
+   a. Create a `.env` file in the project root for sensitive credentials:
    ```env
    # Google Gemini API Key
    GOOGLE_API_KEY=your_gemini_api_key_here
    
-   # Google Sheets Configuration
+   # Google Sheets Credentials Path
    GOOGLE_SHEETS_CREDENTIALS=./google-sheets-credentials.json
-   SPREADSHEET_ID=your_spreadsheet_id
-   SHEET_NAME=Tasks
-   START_ROW=2
+   ```
+   
+   b. Edit `config.py` to set your execution configuration:
+   ```python
+   # Google Sheets Configuration
+   SPREADSHEET_ID = 'your_spreadsheet_id_here'  # Required: Add your Google Sheet ID
+   SHEET_NAME = 'Sheet1'
+   START_ROW = 2
    
    # Execution Configuration
-   EXECUTION_MODE=parallel
-   TASK_DELAY=5
-   RUN_PRIORITY=High
-   RUN_CATEGORY=Hotels
-   HEADLESS_BROWSER=false
-   MAX_PARALLEL_AGENTS=3
+   EXECUTION_MODE = 'parallel'  # 'sequential' or 'parallel'
+   TASK_DELAY = 5  # Delay between tasks in seconds
+   MAX_PARALLEL_AGENTS = 3
+   
+   # Task Filtering Configuration
+   RUN_PRIORITY = 'High'  # 'High', 'Medium', 'Low', or 'All'
+   RUN_CATEGORY = 'Hotels'  # Category to filter, or empty string for all
+   
+   # Browser Configuration
+   HEADLESS_BROWSER = False  # True for headless, False to see browser
    ```
 
 5. **Set up Google Sheets credentials**
@@ -98,10 +107,9 @@ To run tests in GitHub Actions, add these secrets to your repository:
 2. Add the following secrets:
 
    - `GOOGLE_API_KEY` - Your Gemini API key
-   - `SPREADSHEET_ID` - Your Google Sheet ID
-   - `SHEET_NAME` - Sheet name (e.g., "Tasks")
-   - `START_ROW` - Starting row number (e.g., "2")
    - `GOOGLE_SHEETS_CREDENTIALS_JSON` - Full JSON content of your credentials file
+
+**Note:** Other configuration values (SPREADSHEET_ID, execution mode, priorities, etc.) are configured in `config.py` and committed to your repository.
 
 ### Manual Workflow Trigger
 
@@ -140,17 +148,23 @@ Reports include:
 
 ## Configuration Options
 
+All configuration is managed in `config.py`. Edit this file to change settings:
+
 ### Execution Modes
-- **sequential**: Run tests one after another (safer, easier to debug)
-- **parallel**: Run multiple tests concurrently (faster)
+- **EXECUTION_MODE = 'sequential'**: Run tests one after another (safer, easier to debug)
+- **EXECUTION_MODE = 'parallel'**: Run multiple tests concurrently (faster)
 
 ### Browser Modes
-- **HEADLESS_BROWSER=false**: Visible browser (for debugging)
-- **HEADLESS_BROWSER=true**: No browser window (faster, for CI/CD)
+- **HEADLESS_BROWSER = False**: Visible browser (for debugging)
+- **HEADLESS_BROWSER = True**: No browser window (faster, for CI/CD)
 
 ### Parallel Execution
-- **MAX_PARALLEL_AGENTS=0**: Unlimited (all tests at once)
-- **MAX_PARALLEL_AGENTS=3**: Run 3 tests at a time
+- **MAX_PARALLEL_AGENTS = 0**: Unlimited (all tests at once)
+- **MAX_PARALLEL_AGENTS = 3**: Run 3 tests at a time
+
+### Task Filtering
+- **RUN_PRIORITY**: Filter tests by priority ('High', 'Medium', 'Low', or 'All')
+- **RUN_CATEGORY**: Filter tests by category (e.g., 'Hotels', 'Flights', or empty string for all)
 
 ## Project Structure
 
@@ -162,6 +176,7 @@ WebAgentAA/
 ├── reports/                        # Generated HTML reports
 ├── .gitignore                      # Git ignore rules
 ├── requirements.txt                # Python dependencies
+├── config.py                       # Configuration settings
 ├── llm_config.py                   # LLM configuration
 ├── sheets_reader.py                # Google Sheets integration
 ├── task_runner_utils.py            # Task execution utilities
@@ -179,28 +194,19 @@ WebAgentAA/
 1. **"GOOGLE_API_KEY not found"**
    - Ensure `.env` file exists with `GOOGLE_API_KEY` set
 
-2. **"GOOGLE_SHEETS_CREDENTIALS not found"**
+2. **"SPREADSHEET_ID not found in config.py"**
+   - Edit `config.py` and set `SPREADSHEET_ID = 'your_spreadsheet_id_here'`
+
+3. **"GOOGLE_SHEETS_CREDENTIALS not found"**
    - Download service account JSON and save as `google-sheets-credentials.json`
    - Update path in `.env` if different location
 
-3. **Playwright browser not installed**
+4. **Playwright browser not installed**
    ```bash
    playwright install chromium
    playwright install-deps  # Linux only
    ```
 
-4. **Tests fail in headless mode**
-   - Set `HEADLESS_BROWSER=false` for debugging
+5. **Tests fail in headless mode**
+   - Edit `config.py` and set `HEADLESS_BROWSER = False` for debugging
    - Check logs in HTML reports
-
-## License
-
-MIT License
-
-## Contributing
-
-Contributions are welcome! Please open an issue or submit a pull request.
-
-## Support
-
-For issues and questions, please open an issue on GitHub.
