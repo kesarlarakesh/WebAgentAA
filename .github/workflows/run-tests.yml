@@ -1,0 +1,103 @@
+name: Browser Automation Tests
+
+on:
+  # Trigger on push to main branch
+  push:
+    branches: [ main ]
+  
+  # Trigger on pull request
+  pull_request:
+    branches: [ main ]
+  
+  # Allow manual trigger from Actions tab
+  workflow_dispatch:
+    inputs:
+      test_type:
+        description: 'Test type to run'
+        required: true
+        default: 'single'
+        type: choice
+        options:
+          - single
+          - multiple
+          - priority
+          - category
+  
+  # Schedule to run daily at 9 AM UTC
+  schedule:
+    - cron: '0 9 * * *'
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: 'pip'
+      
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          playwright install chromium
+          playwright install-deps chromium
+      
+      - name: Create .env file from secrets
+        run: |
+          cat << EOF > .env
+          GOOGLE_API_KEY=${{ secrets.GOOGLE_API_KEY }}
+          GOOGLE_SHEETS_CREDENTIALS=./google-sheets-credentials.json
+          SPREADSHEET_ID=${{ secrets.SPREADSHEET_ID }}
+          SHEET_NAME=${{ secrets.SHEET_NAME }}
+          START_ROW=${{ secrets.START_ROW }}
+          EXECUTION_MODE=parallel
+          TASK_DELAY=5
+          RUN_PRIORITY=High
+          RUN_CATEGORY=Hotels
+          HEADLESS_BROWSER=true
+          MAX_PARALLEL_AGENTS=3
+          EOF
+      
+      - name: Create Google Sheets credentials file
+        run: |
+          echo '${{ secrets.GOOGLE_SHEETS_CREDENTIALS_JSON }}' > google-sheets-credentials.json
+      
+      - name: Run single task test
+        if: github.event_name != 'workflow_dispatch' || github.event.inputs.test_type == 'single'
+        run: python run_single_task.py
+      
+      - name: Run multiple tasks test
+        if: github.event.inputs.test_type == 'multiple'
+        run: python run_multiple_tasks.py
+      
+      - name: Run priority-based test
+        if: github.event.inputs.test_type == 'priority'
+        run: python run_by_priority.py
+      
+      - name: Run category-based test
+        if: github.event.inputs.test_type == 'category'
+        run: python run_by_category.py
+      
+      - name: Upload HTML report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-report
+          path: reports/
+          retention-days: 30
+      
+      - name: Upload logs on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: failure-logs
+          path: |
+            reports/
+            *.log
+          retention-days: 7
