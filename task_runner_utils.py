@@ -73,8 +73,44 @@ async def run_task(llm, task_info, task_number):
         # Check if the agent actually completed the task successfully
         task_success = result.is_done() if result else False
         
+        # Additional validation: Check the final result message for failure indicators
+        if task_success and result and hasattr(result, 'final_result'):
+            final_msg = result.final_result().lower()
+            
+            # List of failure indicators in the final message
+            failure_indicators = [
+                'unable to',
+                'could not',
+                'failed to',
+                'did not',
+                'cannot',
+                'was not able',
+                'stuck at',
+                'consistently failed',
+                'despite numerous attempts',
+                'however,',
+                'but ',
+                'except ',
+                'unfortunately',
+                'unsuccessfully'
+            ]
+            
+            # Check if any failure indicator is present
+            has_failure_indicator = any(indicator in final_msg for indicator in failure_indicators)
+            
+            if has_failure_indicator:
+                task_success = False
+                print(f"\n⚠️  Test #{task_number} ({task_info['scenario_name']}) marked as done but contains failure indicators.\n")
+                print(f"Final result: {result.final_result()}\n")
+                logs.append(f"[{end_time.strftime('%H:%M:%S')}] Final result: {result.final_result()}")
+                logs.append(f"[{end_time.strftime('%H:%M:%S')}] Status: FAILED - Task reported completion but final message indicates failure")
+        
         if task_success:
             print(f"\n✅ Test #{task_number} ({task_info['scenario_name']}) completed successfully!\n")
+            if result and hasattr(result, 'final_result'):
+                final_msg = result.final_result()
+                print(f"Final result: {final_msg}\n")
+                logs.append(f"[{end_time.strftime('%H:%M:%S')}] Final result: {final_msg}")
             logs.append(f"[{end_time.strftime('%H:%M:%S')}] Status: PASSED")
         else:
             print(f"\n⚠️  Test #{task_number} ({task_info['scenario_name']}) finished but task was not completed.\n")
