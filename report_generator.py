@@ -5,6 +5,7 @@ Generates detailed test execution reports with prompt-status mapping and logs
 from datetime import datetime
 import os
 import glob
+import json
 import config
 
 
@@ -573,7 +574,91 @@ def generate_html_report(results, output_dir='reports'):
     with open(report_path, 'w', encoding='utf-8') as f:
         f.write(html_content)
     
+    # Generate JSON report as well
+    generate_json_report(results, output_dir, timestamp)
+    
     return report_path
+
+
+def generate_json_report(results, output_dir='reports', timestamp=None):
+    """
+    Generate a JSON report from test results.
+    
+    Args:
+        results: List of result dictionaries from test execution
+        output_dir: Directory to save the report (default: 'reports')
+        timestamp: Optional timestamp string, will generate if not provided
+    
+    Returns:
+        str: Path to the generated JSON report file
+    """
+    # Create reports directory if it doesn't exist
+    os.makedirs(output_dir, exist_ok=True)
+    
+    # Generate timestamp if not provided
+    if timestamp is None:
+        timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+    
+    # Calculate statistics
+    total_tests = len(results)
+    passed_tests = sum(1 for r in results if isinstance(r, dict) and r.get('success'))
+    failed_tests = total_tests - passed_tests
+    pass_rate = (passed_tests / total_tests * 100) if total_tests > 0 else 0
+    
+    # Prepare JSON structure
+    json_report = {
+        'metadata': {
+            'timestamp': timestamp,
+            'generated_at': datetime.now().isoformat(),
+            'total_tests': total_tests,
+            'passed_tests': passed_tests,
+            'failed_tests': failed_tests,
+            'pass_rate': round(pass_rate, 2)
+        },
+        'tests': []
+    }
+    
+    # Process each test result
+    for result in results:
+        if not isinstance(result, dict):
+            continue
+        
+        # Prepare test data
+        test_data = {
+            'task_number': result.get('task_number'),
+            'scenario': result.get('scenario', 'Unknown'),
+            'category': result.get('category', 'Unknown'),
+            'priority': result.get('priority', 'Unknown'),
+            'status': 'passed' if result.get('success') else 'failed',
+            'error': result.get('error'),
+            'prompt': result.get('prompt', ''),
+            'steps': []
+        }
+        
+        # Add agent steps
+        agent_steps = result.get('agent_steps', [])
+        for step in agent_steps:
+            step_data = {
+                'step_number': step.get('step_number'),
+                'action': step.get('action', ''),
+                'thought': step.get('thought', ''),
+                'result': str(step.get('result', ''))
+            }
+            test_data['steps'].append(step_data)
+        
+        # Add logs
+        test_data['logs'] = result.get('logs', [])
+        
+        json_report['tests'].append(test_data)
+    
+    # Write JSON report
+    json_path = os.path.join(output_dir, 'json-report.json')
+    with open(json_path, 'w', encoding='utf-8') as f:
+        json.dump(json_report, f, indent=2, ensure_ascii=False)
+    
+    print(f"📄 JSON report generated: {json_path}")
+    
+    return json_path
 
 
 def save_report_index(report_path):
