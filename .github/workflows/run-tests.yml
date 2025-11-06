@@ -125,80 +125,58 @@ jobs:
         run: python run_by_category.py
       
       # Google Cloud SDK Setup and Report Upload
+      - name: Authenticate to Google Cloud
+        if: always()
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.GCP_SERVICE_ACCOUNT_KEY }}
+      
       - name: Setup Google Cloud SDK
         if: always()
         uses: google-github-actions/setup-gcloud@v2
-      
-      - name: Authenticate to Google Cloud
-        if: always()
-        run: |
-          # Validate service account key exists
-          if [ -z "${{ secrets.GCP_SERVICE_ACCOUNT_KEY }}" ]; then
-            echo "❌ GCP_SERVICE_ACCOUNT_KEY secret is not set"
-            exit 1
-          fi
-          
-          # Setup authentication
-          echo '${{ secrets.GCP_SERVICE_ACCOUNT_KEY }}' > /tmp/gcp-key.json
-          PROJECT_ID=$(jq -r '.project_id' /tmp/gcp-key.json)
-          
-          gcloud auth activate-service-account --key-file=/tmp/gcp-key.json
-          gcloud config set project $PROJECT_ID
-          
-          echo "✅ Authentication complete"
       
       - name: Upload Reports to Google Cloud Storage
         if: always()
         id: upload-reports
         run: |
-          # Configuration
+          set -e
+          
           GCS_FOLDER="webagentreports"
           BUCKET_NAME="aawebagentreports"
           
-          # Helper function to find reports directories
-          find_report_dirs() {
-            find . -maxdepth 1 -type d -name "reports" 2>/dev/null || true
-          }
-          
-          # Helper function to generate URLs
-          generate_report_urls() {
-            local first_dir=$(find . -maxdepth 1 -type d -name "reports" -print -quit 2>/dev/null | sed 's|^\./||')
-            local custom_url=""
-            
-            if [ -n "$first_dir" ] && [ -f "$first_dir/index.html" ]; then
-              custom_url="https://storage.googleapis.com/${BUCKET_NAME}/${GCS_FOLDER}/${first_dir}/index.html"
-            fi
-            
-            echo "gcs_folder=${GCS_FOLDER}" >> $GITHUB_OUTPUT
-            echo "custom_report_url=${custom_url}" >> $GITHUB_OUTPUT
-            echo "bucket_url=https://console.cloud.google.com/storage/browser/${BUCKET_NAME}/${GCS_FOLDER}" >> $GITHUB_OUTPUT
-            
-            [ -n "$custom_url" ] && echo "📄 Custom report URL: $custom_url"
-          }
-          
-          # Main upload logic
-          REPORT_DIRS=$(find_report_dirs)
-          
-          if [ -z "$REPORT_DIRS" ]; then
-            echo "❌ No report directories found"
-            generate_report_urls  # Set empty outputs
+          if [ ! -d "reports" ]; then
+            echo "No reports directory found"
+            echo "gcs_folder=${GCS_FOLDER}" >> "${GITHUB_OUTPUT}"
+            echo "custom_report_url=" >> "${GITHUB_OUTPUT}"
+            echo "bucket_url=https://console.cloud.google.com/storage/browser/${BUCKET_NAME}/${GCS_FOLDER}" >> "${GITHUB_OUTPUT}"
             exit 0
           fi
           
-          echo "📁 Found reports: $(echo "$REPORT_DIRS" | wc -l) directories"
+          echo "Found reports directory"
+          ls -la reports/
           
-          # Upload all report directories
-          echo "$REPORT_DIRS" | while IFS= read -r report_dir; do
-            echo ⬆️  Uploading $(basename "$report_dir")..."
-            gsutil -m cp -r "$report_dir" gs://${BUCKET_NAME}/${GCS_FOLDER}/
-          done
+          echo "Uploading reports to gs://${BUCKET_NAME}/${GCS_FOLDER}/"
+          gsutil -m cp -r reports "gs://${BUCKET_NAME}/${GCS_FOLDER}/" || {
+            echo "Failed to upload reports"
+            exit 1
+          }
           
-          # Set public access
-          gsutil -m acl ch -r -u AllUsers:R gs://${BUCKET_NAME}/${GCS_FOLDER}/ || echo "⚠️  Failed to set public access"
+          echo "Setting public access..."
+          gsutil -m acl ch -r -u AllUsers:R "gs://${BUCKET_NAME}/${GCS_FOLDER}/reports/" || {
+            echo "Warning: Failed to set public access"
+          }
           
-          # Generate and set outputs
-          generate_report_urls
-          echo "✅ Upload completed successfully"
+          CUSTOM_URL=""
+          if [ -f "reports/index.html" ]; then
+            CUSTOM_URL="https://storage.googleapis.com/${BUCKET_NAME}/${GCS_FOLDER}/reports/index.html"
+            echo "Custom report URL: ${CUSTOM_URL}"
+          fi
+          
+          echo "gcs_folder=${GCS_FOLDER}" >> "${GITHUB_OUTPUT}"
+          echo "custom_report_url=${CUSTOM_URL}" >> "${GITHUB_OUTPUT}"
+          echo "bucket_url=https://console.cloud.google.com/storage/browser/${BUCKET_NAME}/${GCS_FOLDER}" >> "${GITHUB_OUTPUT}"
+          
+          echo "Upload completed successfully"
       
       - name: Upload HTML report
         if: always()
