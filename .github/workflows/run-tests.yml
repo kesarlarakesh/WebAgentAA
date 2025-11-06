@@ -1,4 +1,4 @@
-name: Browser Automation Tests
+name: AA Agent Automation Tests
 
 on:
   # Trigger on push to main branch
@@ -204,33 +204,37 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
       
-      - name: Setup Node
-        uses: actions/setup-node@v4
-        with:
-          node-version: 20
-      
       - name: Download test results
         uses: actions/download-artifact@v4
         with:
           name: reports
-          path: ./
+          path: ./reports
       
       - name: Extract Test Statistics
         id: extract-stats
         run: |
-          # Check for test results file
           echo "Looking for test results..."
           
-          # First check standard location
+          # Debug: List downloaded files
+          echo "Contents of current directory:"
+          ls -la
+          echo "Contents of reports directory:"
+          ls -la reports/ || echo "reports directory not found"
+          
+          # Check for JSON report file
           if [ -f "reports/json-report.json" ]; then
             JSON_PATH="reports/json-report.json"
             echo "Found report at: $JSON_PATH"
+          elif [ -f "json-report.json" ]; then
+            JSON_PATH="json-report.json"
+            echo "Found report at root: $JSON_PATH"
           else
-            # Look for any JSON files in reports directory
-            JSON_FILES=$(find . -path "*/reports/*.json" 2>/dev/null)
-            
+            # Fallback: search for any JSON file
+            echo "Searching for JSON files..."
+            find . -name "*.json" -type f
+            JSON_FILES=$(find . -name "json*.json" -type f -print -quit 2>/dev/null)
             if [ -n "$JSON_FILES" ]; then
-              JSON_PATH=$(echo "$JSON_FILES" | head -n 1)
+              JSON_PATH="$JSON_FILES"
               echo "Using alternative report: $JSON_PATH"
             else
               echo "No test report files found"
@@ -238,35 +242,27 @@ jobs:
             fi
           fi
           
-          # Process test results if file exists
+          # Extract statistics from JSON or use defaults
           if [ -n "$JSON_PATH" ] && [ -f "$JSON_PATH" ]; then
-            # Install jq if not available (ensures it's present)
+            echo "Reading JSON file: $JSON_PATH"
+            cat "$JSON_PATH"
+            
+            # Install jq if needed
             if ! command -v jq &> /dev/null; then
-              echo "Installing jq for JSON parsing"
-              sudo apt-get update && sudo apt-get install -y jq
+              echo "Installing jq..."
+              sudo apt-get update -qq && sudo apt-get install -y -qq jq
             fi
             
-            # Extracting test statistics with jq
-            # First, check the structure to determine the proper jq query
-            echo "Analyzing JSON structure..."
-            
-            # Count test results by status
+            # Extract test statistics
             TOTAL=$(jq -r '.metadata.total_tests // 0' "$JSON_PATH")
             PASSED=$(jq -r '.metadata.passed_tests // 0' "$JSON_PATH")
             FAILED=$(jq -r '.metadata.failed_tests // 0' "$JSON_PATH")
-            
-            # Calculate flaky and skipped (if applicable in future)
             FLAKY=0
             SKIPPED=0
             
-            echo "Test Statistics:"
-            echo "Total: $TOTAL"
-            echo "Passed: $PASSED"
-            echo "Failed: $FAILED"
-            echo "Flaky: $FLAKY"
-            echo "Skipped: $SKIPPED"
+            echo "Test Statistics: Total=$TOTAL, Passed=$PASSED, Failed=$FAILED"
           else
-            echo "⚠️ No test results found, using default values"
+            echo "No test results found, using defaults"
             TOTAL=0
             PASSED=0
             FAILED=0
@@ -274,15 +270,12 @@ jobs:
             SKIPPED=0
           fi
           
-          # Set outputs for use in next step
+          # Set outputs
           echo "total=$TOTAL" >> $GITHUB_OUTPUT
           echo "passed=$PASSED" >> $GITHUB_OUTPUT
           echo "failed=$FAILED" >> $GITHUB_OUTPUT
           echo "flaky=$FLAKY" >> $GITHUB_OUTPUT
           echo "skipped=$SKIPPED" >> $GITHUB_OUTPUT
-          
-          # Create a summary for direct use in the notification
-          echo "summary=Total: $TOTAL | Passed: $PASSED | Failed: $FAILED | Flaky: $FLAKY | Skipped: $SKIPPED" >> $GITHUB_OUTPUT
       
       - name: Notify Slack
         uses: rtCamp/action-slack-notify@v2
