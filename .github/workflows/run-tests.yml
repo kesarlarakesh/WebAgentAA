@@ -182,7 +182,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: test-report
+          name: reports
           path: reports/
           retention-days: 30
       
