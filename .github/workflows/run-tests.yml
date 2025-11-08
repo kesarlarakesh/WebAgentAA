@@ -143,6 +143,7 @@ jobs:
           
           GCS_FOLDER="webagentreports"
           BUCKET_NAME="aawebagentreports"
+          GCS_REPORTS_PATH="${GCS_FOLDER}/reports"
           
           if [ ! -d "reports" ]; then
             echo "No reports directory found"
@@ -155,26 +156,46 @@ jobs:
           echo "Found reports directory"
           ls -la reports/
           
-          echo "Uploading reports to gs://${BUCKET_NAME}/${GCS_FOLDER}/"
-          gsutil -m cp -r reports "gs://${BUCKET_NAME}/${GCS_FOLDER}/" || {
-            echo "Failed to upload reports"
-            exit 1
-          }
+          # Find all run_* directories
+          echo "Listing run directories..."
+          ls -la reports/run_* 2>/dev/null || echo "No run directories found"
+          
+          # Upload each run directory and index.html to GCS
+          echo "Uploading main index.html to gs://${BUCKET_NAME}/${GCS_REPORTS_PATH}/"
+          if [ -f "reports/index.html" ]; then
+            gsutil cp "reports/index.html" "gs://${BUCKET_NAME}/${GCS_REPORTS_PATH}/index.html" || {
+              echo "Failed to upload main index.html"
+              exit 1
+            }
+          fi
+          
+          # Upload all run_* directories
+          echo "Uploading run directories to gs://${BUCKET_NAME}/${GCS_REPORTS_PATH}/"
+          for run_dir in reports/run_*; do
+            if [ -d "$run_dir" ]; then
+              run_name=$(basename "$run_dir")
+              echo "Uploading $run_name..."
+              gsutil -m cp -r "$run_dir" "gs://${BUCKET_NAME}/${GCS_REPORTS_PATH}/" || {
+                echo "Failed to upload $run_name"
+                exit 1
+              }
+            fi
+          done
           
           echo "Setting public access..."
-          gsutil -m acl ch -r -u AllUsers:R "gs://${BUCKET_NAME}/${GCS_FOLDER}/reports/" || {
+          gsutil -m acl ch -r -u AllUsers:R "gs://${BUCKET_NAME}/${GCS_REPORTS_PATH}/" || {
             echo "Warning: Failed to set public access"
           }
           
           CUSTOM_URL=""
           if [ -f "reports/index.html" ]; then
-            CUSTOM_URL="https://storage.googleapis.com/${BUCKET_NAME}/${GCS_FOLDER}/reports/index.html"
+            CUSTOM_URL="https://storage.googleapis.com/${BUCKET_NAME}/${GCS_REPORTS_PATH}/index.html"
             echo "Custom report URL: ${CUSTOM_URL}"
           fi
           
           echo "gcs_folder=${GCS_FOLDER}" >> "${GITHUB_OUTPUT}"
           echo "custom_report_url=${CUSTOM_URL}" >> "${GITHUB_OUTPUT}"
-          echo "bucket_url=https://console.cloud.google.com/storage/browser/${BUCKET_NAME}/${GCS_FOLDER}" >> "${GITHUB_OUTPUT}"
+          echo "bucket_url=https://console.cloud.google.com/storage/browser/${BUCKET_NAME}/${GCS_REPORTS_PATH}" >> "${GITHUB_OUTPUT}"
           
           echo "Upload completed successfully"
       
@@ -221,24 +242,30 @@ jobs:
           echo "Contents of reports directory:"
           ls -la reports/ || echo "reports directory not found"
           
-          # Check for JSON report file
-          if [ -f "reports/json-report.json" ]; then
-            JSON_PATH="reports/json-report.json"
-            echo "Found report at: $JSON_PATH"
-          elif [ -f "json-report.json" ]; then
-            JSON_PATH="json-report.json"
-            echo "Found report at root: $JSON_PATH"
+          # Check for JSON report file in timestamped subdirectories
+          JSON_PATH=""
+          
+          # Look for the latest run directory
+          LATEST_RUN=$(find reports -maxdepth 1 -type d -name "run_*" | sort -r | head -n 1)
+          
+          if [ -n "$LATEST_RUN" ] && [ -d "$LATEST_RUN" ]; then
+            echo "Found latest run directory: $LATEST_RUN"
+            ls -la "$LATEST_RUN"
+            
+            # Look for JSON report in the run directory
+            JSON_FILE=$(find "$LATEST_RUN" -name "json_report_*.json" -type f | head -n 1)
+            if [ -n "$JSON_FILE" ]; then
+              JSON_PATH="$JSON_FILE"
+              echo "Found JSON report: $JSON_PATH"
+            fi
           else
+            echo "No run directories found, checking for JSON files in reports root..."
             # Fallback: search for any JSON file
-            echo "Searching for JSON files..."
             find . -name "*.json" -type f
             JSON_FILES=$(find . -name "json*.json" -type f -print -quit 2>/dev/null)
             if [ -n "$JSON_FILES" ]; then
               JSON_PATH="$JSON_FILES"
               echo "Using alternative report: $JSON_PATH"
-            else
-              echo "No test report files found"
-              JSON_PATH=""
             fi
           fi
           

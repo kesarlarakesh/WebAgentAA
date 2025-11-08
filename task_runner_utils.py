@@ -32,6 +32,10 @@ async def run_task(llm, task_info, task_number):
     agent_steps = []
     
     try:
+        # Capture execution start time
+        from datetime import datetime
+        start_time = datetime.now()
+        
         # Get browser configuration from config.py
         headless = config.HEADLESS_BROWSER
         
@@ -41,9 +45,6 @@ async def run_task(llm, task_info, task_number):
         # Create and run agent with configured browser
         agent = Agent(task=task_info['prompt_text'], llm=llm, browser=browser)
         
-        # Capture execution start time
-        from datetime import datetime
-        start_time = datetime.now()
         logs.append(f"[{start_time.strftime('%H:%M:%S')}] Test execution started")
         logs.append(f"[{start_time.strftime('%H:%M:%S')}] Scenario: {task_info['scenario_name']}")
         logs.append(f"[{start_time.strftime('%H:%M:%S')}] Category: {task_info['category']}")
@@ -54,15 +55,44 @@ async def run_task(llm, task_info, task_number):
         # Capture agent history/steps after execution
         if result and hasattr(result, 'history'):
             history = result.history if not callable(result.history) else result.history()
+            
             for i, step in enumerate(history, 1):
+                # Extract action name and details
+                action_name = 'N/A'
+                action_details = ''
+                
+                if hasattr(step, 'action'):
+                    action_obj = step.action
+                    # Get the action name/type
+                    if hasattr(action_obj, '__class__'):
+                        action_name = action_obj.__class__.__name__
+                    elif hasattr(action_obj, 'name'):
+                        action_name = str(action_obj.name)
+                    else:
+                        action_name = str(action_obj)
+                    
+                    # Try to get action details/parameters
+                    if hasattr(action_obj, '__dict__'):
+                        action_details = str(action_obj.__dict__)
+                
+                # Extract thought/reasoning
+                thought = ''
+                if hasattr(step, 'thought'):
+                    thought = str(step.thought)
+                elif hasattr(step, 'model_output'):
+                    thought = str(step.model_output)
+                
                 step_info = {
                     'step_number': i,
-                    'action': str(step.action) if hasattr(step, 'action') else 'N/A',
+                    'action': action_name,
+                    'action_details': action_details,
+                    'thought': thought,
                     'result': str(step.result) if hasattr(step, 'result') else 'N/A',
-                    'model_output': str(step.model_output) if hasattr(step, 'model_output') else ''
+                    'model_output': str(step.model_output) if hasattr(step, 'model_output') else '',
+                    'screenshot': None
                 }
                 agent_steps.append(step_info)
-                logs.append(f"[{start_time.strftime('%H:%M:%S')}] Step {i}: {step_info['action']}")
+                logs.append(f"[{start_time.strftime('%H:%M:%S')}] Step {i}: {action_name}")
         
         # Capture execution end time
         end_time = datetime.now()
