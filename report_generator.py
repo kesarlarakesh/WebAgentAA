@@ -46,18 +46,17 @@ def generate_html_report(results, output_dir='reports'):
     # Create reports directory if it doesn't exist
     os.makedirs(output_dir, exist_ok=True)
     
-    # Delete old reports (keep only the latest)
-    old_reports = glob.glob(os.path.join(output_dir, 'test_report_*.html'))
-    for old_report in old_reports:
-        try:
-            os.remove(old_report)
-        except Exception as e:
-            print(f"Warning: Could not delete old report {old_report}: {e}")
-    
-    # Generate timestamp for report filename
+    # Generate timestamp for this test run
     timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+    
+    # Create timestamped subdirectory for this test run
+    run_dir = os.path.join(output_dir, f'run_{timestamp}')
+    os.makedirs(run_dir, exist_ok=True)
+    print(f"📁 Created test run directory: {run_dir}")
+    
+    # Generate report filename
     report_filename = f'test_report_{timestamp}.html'
-    report_path = os.path.join(output_dir, report_filename)
+    report_path = os.path.join(run_dir, report_filename)
     
     # Calculate statistics
     stats = calculate_test_statistics(results)
@@ -598,12 +597,20 @@ def generate_html_report(results, output_dir='reports'):
     with open(report_path, 'w', encoding='utf-8') as f:
         f.write(html_content)
     
-    # Generate JSON report as well
+    # Generate JSON report in the same subdirectory
     try:
-        generate_json_report(results, output_dir, timestamp)
+        json_report_path = generate_json_report(results, run_dir, timestamp)
+        print(f"✅ JSON report generated: {json_report_path}")
     except Exception as e:
-        print(f"Warning: Failed to generate JSON report: {e}")
-        # Continue anyway - HTML report is the primary output
+        print(f"⚠️ Warning: Failed to generate JSON report: {e}")
+    
+    # Create index.html in the run directory that points to the test report
+    run_index_path = save_run_index(report_path, run_dir)
+    print(f"✅ Run index file created: {run_index_path}")
+    
+    # Update main index.html to point to the latest report
+    main_index_path = save_report_index(report_path, output_dir)
+    print(f"✅ Main index file updated: {main_index_path}")
     
     return report_path
 
@@ -677,54 +684,77 @@ def generate_json_report(results, output_dir='reports', timestamp=None):
         
         json_report['tests'].append(test_data)
     
-    # Delete old JSON reports (keep only the latest)
-    old_json_reports = glob.glob(os.path.join(output_dir, 'json_report_*.json'))
-    for old_report in old_json_reports:
-        try:
-            os.remove(old_report)
-        except Exception as e:
-            print(f"Warning: Could not delete old JSON report {old_report}: {e}")
-    
-    # Write timestamped JSON report
+    # Write timestamped JSON report in the run subdirectory
     json_filename = f'json_report_{timestamp}.json'
     json_path = os.path.join(output_dir, json_filename)
     with open(json_path, 'w', encoding='utf-8') as f:
         json.dump(json_report, f, indent=2, ensure_ascii=False)
-    
-    # Create a symlink or copy as json-report.json for backward compatibility
-    latest_json_path = os.path.join(output_dir, 'json-report.json')
-    try:
-        # Remove old symlink/file if exists
-        if os.path.exists(latest_json_path):
-            os.remove(latest_json_path)
-        # Create a copy (Windows-friendly alternative to symlink)
-        import shutil
-        shutil.copy2(json_path, latest_json_path)
-    except Exception as e:
-        print(f"Warning: Could not create json-report.json copy: {e}")
     
     print(f"📄 JSON report generated: {json_path}")
     
     return json_path
 
 
-def save_report_index(report_path):
+def save_run_index(report_path, run_dir):
     """
-    Create/update an index.html that always points to the latest report
+    Create an index.html in the run directory that redirects to the test report.
+    
+    Args:
+        report_path: Full path to the test report HTML file
+        run_dir: Directory of the current test run
+    
+    Returns:
+        str: Path to the run directory index.html file
     """
-    reports_dir = os.path.dirname(report_path)
-    index_path = os.path.join(reports_dir, 'index.html')
+    index_path = os.path.join(run_dir, 'index.html')
+    report_filename = os.path.basename(report_path)
     
     index_content = f"""<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta http-equiv="refresh" content="0; url={os.path.basename(report_path)}">
+    <meta http-equiv="refresh" content="0; url={report_filename}">
+    <title>Redirecting to Test Report...</title>
+</head>
+<body>
+    <p>Redirecting to test report...</p>
+    <p>If not redirected, <a href="{report_filename}">click here</a>.</p>
+</body>
+</html>
+"""
+    
+    with open(index_path, 'w', encoding='utf-8') as f:
+        f.write(index_content)
+    
+    return index_path
+
+
+def save_report_index(report_path, output_dir='reports'):
+    """
+    Create/update an index.html in the main reports directory that redirects to the latest report.
+    
+    Args:
+        report_path: Full path to the latest report file (inside run subdirectory)
+        output_dir: Base reports directory (default: 'reports')
+    
+    Returns:
+        str: Path to the index.html file
+    """
+    index_path = os.path.join(output_dir, 'index.html')
+    
+    # Get the relative path from reports directory to the actual report
+    relative_path = os.path.relpath(report_path, output_dir)
+    
+    index_content = f"""<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="refresh" content="0; url={relative_path}">
     <title>Redirecting to Latest Report...</title>
 </head>
 <body>
     <p>Redirecting to latest report...</p>
-    <p>If not redirected, <a href="{os.path.basename(report_path)}">click here</a>.</p>
+    <p>If not redirected, <a href="{relative_path}">click here</a>.</p>
 </body>
 </html>
 """
