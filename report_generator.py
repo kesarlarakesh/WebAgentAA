@@ -500,6 +500,8 @@ def generate_html_report(results, output_dir='reports'):
             for step in agent_steps:
                 step_num = step.get('step_number', '?')
                 action = step.get('action', 'Unknown action')
+                action_details = step.get('action_details', '')
+                thought = step.get('thought', '')
                 result_text = step.get('result', '')
                 model_output = step.get('model_output', '')
                 
@@ -510,16 +512,33 @@ def generate_html_report(results, output_dir='reports'):
                                 <span class="step-action">{action}</span>
                             </div>
 """
+                # Show action details if available
+                if action_details and action_details != '':
+                    truncated_details = action_details[:200] + '...' if len(action_details) > 200 else action_details
+                    html_content += f"""
+                            <div class="step-details"><strong>Action Details:</strong> {truncated_details}</div>
+"""
+                
+                # Show thought/reasoning if available
+                if thought and thought != '':
+                    truncated_thought = thought[:300] + '...' if len(thought) > 300 else thought
+                    html_content += f"""
+                            <div class="step-details"><strong>Thought:</strong> {truncated_thought}</div>
+"""
+                
+                # Show result
                 if result_text and result_text != 'N/A':
                     html_content += f"""
                             <div class="step-details"><strong>Result:</strong> {result_text}</div>
 """
-                if model_output and model_output != '':
-                    # Truncate long model outputs for readability
+                
+                # Show model output if different from thought
+                if model_output and model_output != '' and model_output != thought:
                     truncated_output = model_output[:300] + '...' if len(model_output) > 300 else model_output
                     html_content += f"""
                             <div class="step-details"><strong>Model Output:</strong> {truncated_output}</div>
 """
+                
                 html_content += """
                         </div>
 """
@@ -674,6 +693,7 @@ def generate_json_report(results, output_dir='reports', timestamp=None):
             step_data = {
                 'step_number': step.get('step_number'),
                 'action': step.get('action', ''),
+                'action_details': step.get('action_details', ''),
                 'thought': step.get('thought', ''),
                 'result': str(step.get('result', ''))
             }
