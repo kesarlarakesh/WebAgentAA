@@ -624,12 +624,11 @@ def generate_html_report(results, output_dir='reports'):
         print(f"⚠️ Warning: Failed to generate JSON report: {e}")
     
     # Create index.html in the run directory that points to the test report
-    run_index_path = save_run_index(report_path, run_dir)
-    print(f"✅ Run index file created: {run_index_path}")
-    
-    # Update main index.html to point to the latest report
-    main_index_path = save_report_index(report_path, output_dir)
-    print(f"✅ Main index file updated: {main_index_path}")
+    try:
+        run_index_path = save_run_index(report_path, run_dir)
+        print(f"✅ Run index file created: {run_index_path}")
+    except Exception as e:
+        print(f"⚠️ Warning: Failed to create run index file: {e}")
     
     return report_path
 
@@ -709,8 +708,6 @@ def generate_json_report(results, output_dir='reports', timestamp=None):
     json_path = os.path.join(output_dir, json_filename)
     with open(json_path, 'w', encoding='utf-8') as f:
         json.dump(json_report, f, indent=2, ensure_ascii=False)
-    
-    print(f"📄 JSON report generated: {json_path}")
     
     return json_path
 
