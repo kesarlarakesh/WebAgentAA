@@ -5,7 +5,31 @@ Generates detailed test execution reports with prompt-status mapping and logs
 from datetime import datetime
 import os
 import glob
+import json
 import config
+
+
+def calculate_test_statistics(results):
+    """
+    Calculate test statistics from results.
+    
+    Args:
+        results: List of result dictionaries from test execution
+    
+    Returns:
+        dict: Dictionary containing total_tests, passed_tests, failed_tests, and pass_rate
+    """
+    total_tests = len(results)
+    passed_tests = sum(1 for r in results if isinstance(r, dict) and r.get('success'))
+    failed_tests = total_tests - passed_tests
+    pass_rate = (passed_tests / total_tests * 100) if total_tests > 0 else 0
+    
+    return {
+        'total_tests': total_tests,
+        'passed_tests': passed_tests,
+        'failed_tests': failed_tests,
+        'pass_rate': pass_rate
+    }
 
 
 def generate_html_report(results, output_dir='reports'):
@@ -36,10 +60,11 @@ def generate_html_report(results, output_dir='reports'):
     report_path = os.path.join(output_dir, report_filename)
     
     # Calculate statistics
-    total_tests = len(results)
-    passed_tests = sum(1 for r in results if isinstance(r, dict) and r.get('success'))
-    failed_tests = total_tests - passed_tests
-    pass_rate = (passed_tests / total_tests * 100) if total_tests > 0 else 0
+    stats = calculate_test_statistics(results)
+    total_tests = stats['total_tests']
+    passed_tests = stats['passed_tests']
+    failed_tests = stats['failed_tests']
+    pass_rate = stats['pass_rate']
     
     # Generate HTML content
     html_content = f"""<!DOCTYPE html>
@@ -573,7 +598,114 @@ def generate_html_report(results, output_dir='reports'):
     with open(report_path, 'w', encoding='utf-8') as f:
         f.write(html_content)
     
+    # Generate JSON report as well
+    try:
+        generate_json_report(results, output_dir, timestamp)
+    except Exception as e:
+        print(f"Warning: Failed to generate JSON report: {e}")
+        # Continue anyway - HTML report is the primary output
+    
     return report_path
+
+
+def generate_json_report(results, output_dir='reports', timestamp=None):
+    """
+    Generate a JSON report from test results.
+    
+    Args:
+        results: List of result dictionaries from test execution
+        output_dir: Directory to save the report (default: 'reports')
+        timestamp: Optional timestamp string in format '%Y%m%d_%H%M%S' (e.g., '20250106_143022').
+                  Used as report ID and in filename. Will be auto-generated if not provided.
+    
+    Returns:
+        str: Path to the generated JSON report file (e.g., 'reports/json_report_20250106_143022.json')
+    """
+    # Create reports directory if it doesn't exist
+    os.makedirs(output_dir, exist_ok=True)
+    
+    # Generate timestamp for report ID if not provided
+    if timestamp is None:
+        timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+    
+    # Calculate statistics
+    stats = calculate_test_statistics(results)
+    
+    # Prepare JSON structure
+    json_report = {
+        'metadata': {
+            'report_id': timestamp,
+            'generated_at': datetime.now().isoformat(),
+            'total_tests': stats['total_tests'],
+            'passed_tests': stats['passed_tests'],
+            'failed_tests': stats['failed_tests'],
+            'pass_rate': round(stats['pass_rate'], 2)
+        },
+        'tests': []
+    }
+    
+    # Process each test result
+    for result in results:
+        if not isinstance(result, dict):
+            continue
+        
+        # Prepare test data
+        test_data = {
+            'task_number': result.get('task_number'),
+            'scenario': result.get('scenario', 'Unknown'),
+            'category': result.get('category', 'Unknown'),
+            'priority': result.get('priority', 'Unknown'),
+            'status': 'passed' if result.get('success') else 'failed',
+            'error': result.get('error'),
+            'prompt': result.get('prompt', ''),
+            'steps': []
+        }
+        
+        # Add agent steps
+        agent_steps = result.get('agent_steps', [])
+        for step in agent_steps:
+            step_data = {
+                'step_number': step.get('step_number'),
+                'action': step.get('action', ''),
+                'thought': step.get('thought', ''),
+                'result': str(step.get('result', ''))
+            }
+            test_data['steps'].append(step_data)
+        
+        # Add logs
+        test_data['logs'] = result.get('logs', [])
+        
+        json_report['tests'].append(test_data)
+    
+    # Delete old JSON reports (keep only the latest)
+    old_json_reports = glob.glob(os.path.join(output_dir, 'json_report_*.json'))
+    for old_report in old_json_reports:
+        try:
+            os.remove(old_report)
+        except Exception as e:
+            print(f"Warning: Could not delete old JSON report {old_report}: {e}")
+    
+    # Write timestamped JSON report
+    json_filename = f'json_report_{timestamp}.json'
+    json_path = os.path.join(output_dir, json_filename)
+    with open(json_path, 'w', encoding='utf-8') as f:
+        json.dump(json_report, f, indent=2, ensure_ascii=False)
+    
+    # Create a symlink or copy as json-report.json for backward compatibility
+    latest_json_path = os.path.join(output_dir, 'json-report.json')
+    try:
+        # Remove old symlink/file if exists
+        if os.path.exists(latest_json_path):
+            os.remove(latest_json_path)
+        # Create a copy (Windows-friendly alternative to symlink)
+        import shutil
+        shutil.copy2(json_path, latest_json_path)
+    except Exception as e:
+        print(f"Warning: Could not create json-report.json copy: {e}")
+    
+    print(f"📄 JSON report generated: {json_path}")
+    
+    return json_path
 
 
 def save_report_index(report_path):

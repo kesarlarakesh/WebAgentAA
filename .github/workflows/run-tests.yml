@@ -1,4 +1,4 @@
-name: Browser Automation Tests
+name: AA Agent Automation Tests
 
 on:
   # Trigger on push to main branch
@@ -75,6 +75,10 @@ jobs:
   test:
     runs-on: ubuntu-latest
     needs: security-scan
+    outputs:
+      custom_report_url: ${{ steps.upload-reports.outputs.custom_report_url }}
+      bucket_url: ${{ steps.upload-reports.outputs.bucket_url }}
+      gcs_folder: ${{ steps.upload-reports.outputs.gcs_folder }}
     
     steps:
       - name: Checkout code
@@ -120,11 +124,65 @@ jobs:
         if: github.event.inputs.test_type == 'category'
         run: python run_by_category.py
       
+      # Google Cloud SDK Setup and Report Upload
+      - name: Authenticate to Google Cloud
+        if: always()
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.GCP_SERVICE_ACCOUNT_KEY }}
+      
+      - name: Setup Google Cloud SDK
+        if: always()
+        uses: google-github-actions/setup-gcloud@v2
+      
+      - name: Upload Reports to Google Cloud Storage
+        if: always()
+        id: upload-reports
+        run: |
+          set -e
+          
+          GCS_FOLDER="webagentreports"
+          BUCKET_NAME="aawebagentreports"
+          
+          if [ ! -d "reports" ]; then
+            echo "No reports directory found"
+            echo "gcs_folder=${GCS_FOLDER}" >> "${GITHUB_OUTPUT}"
+            echo "custom_report_url=" >> "${GITHUB_OUTPUT}"
+            echo "bucket_url=https://console.cloud.google.com/storage/browser/${BUCKET_NAME}/${GCS_FOLDER}" >> "${GITHUB_OUTPUT}"
+            exit 0
+          fi
+          
+          echo "Found reports directory"
+          ls -la reports/
+          
+          echo "Uploading reports to gs://${BUCKET_NAME}/${GCS_FOLDER}/"
+          gsutil -m cp -r reports "gs://${BUCKET_NAME}/${GCS_FOLDER}/" || {
+            echo "Failed to upload reports"
+            exit 1
+          }
+          
+          echo "Setting public access..."
+          gsutil -m acl ch -r -u AllUsers:R "gs://${BUCKET_NAME}/${GCS_FOLDER}/reports/" || {
+            echo "Warning: Failed to set public access"
+          }
+          
+          CUSTOM_URL=""
+          if [ -f "reports/index.html" ]; then
+            CUSTOM_URL="https://storage.googleapis.com/${BUCKET_NAME}/${GCS_FOLDER}/reports/index.html"
+            echo "Custom report URL: ${CUSTOM_URL}"
+          fi
+          
+          echo "gcs_folder=${GCS_FOLDER}" >> "${GITHUB_OUTPUT}"
+          echo "custom_report_url=${CUSTOM_URL}" >> "${GITHUB_OUTPUT}"
+          echo "bucket_url=https://console.cloud.google.com/storage/browser/${BUCKET_NAME}/${GCS_FOLDER}" >> "${GITHUB_OUTPUT}"
+          
+          echo "Upload completed successfully"
+      
       - name: Upload HTML report
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: test-report
+          name: reports
           path: reports/
           retention-days: 30
       
@@ -137,3 +195,108 @@ jobs:
             reports/
             *.log
           retention-days: 7
+
+  notify:
+    runs-on: ubuntu-latest
+    needs: test
+    if: always()
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Download test results
+        uses: actions/download-artifact@v4
+        with:
+          name: reports
+          path: ./reports
+      
+      - name: Extract Test Statistics
+        id: extract-stats
+        run: |
+          echo "Looking for test results..."
+          
+          # Debug: List downloaded files
+          echo "Contents of current directory:"
+          ls -la
+          echo "Contents of reports directory:"
+          ls -la reports/ || echo "reports directory not found"
+          
+          # Check for JSON report file
+          if [ -f "reports/json-report.json" ]; then
+            JSON_PATH="reports/json-report.json"
+            echo "Found report at: $JSON_PATH"
+          elif [ -f "json-report.json" ]; then
+            JSON_PATH="json-report.json"
+            echo "Found report at root: $JSON_PATH"
+          else
+            # Fallback: search for any JSON file
+            echo "Searching for JSON files..."
+            find . -name "*.json" -type f
+            JSON_FILES=$(find . -name "json*.json" -type f -print -quit 2>/dev/null)
+            if [ -n "$JSON_FILES" ]; then
+              JSON_PATH="$JSON_FILES"
+              echo "Using alternative report: $JSON_PATH"
+            else
+              echo "No test report files found"
+              JSON_PATH=""
+            fi
+          fi
+          
+          # Extract statistics from JSON or use defaults
+          if [ -n "$JSON_PATH" ] && [ -f "$JSON_PATH" ]; then
+            echo "Reading JSON file: $JSON_PATH"
+            cat "$JSON_PATH"
+            
+            # Install jq if needed
+            if ! command -v jq &> /dev/null; then
+              echo "Installing jq..."
+              sudo apt-get update -qq && sudo apt-get install -y -qq jq
+            fi
+            
+            # Extract test statistics
+            TOTAL=$(jq -r '.metadata.total_tests // 0' "$JSON_PATH")
+            PASSED=$(jq -r '.metadata.passed_tests // 0' "$JSON_PATH")
+            FAILED=$(jq -r '.metadata.failed_tests // 0' "$JSON_PATH")
+            FLAKY=0
+            SKIPPED=0
+            
+            echo "Test Statistics: Total=$TOTAL, Passed=$PASSED, Failed=$FAILED"
+          else
+            echo "No test results found, using defaults"
+            TOTAL=0
+            PASSED=0
+            FAILED=0
+            FLAKY=0
+            SKIPPED=0
+          fi
+          
+          # Set outputs
+          echo "total=$TOTAL" >> $GITHUB_OUTPUT
+          echo "passed=$PASSED" >> $GITHUB_OUTPUT
+          echo "failed=$FAILED" >> $GITHUB_OUTPUT
+          echo "flaky=$FLAKY" >> $GITHUB_OUTPUT
+          echo "skipped=$SKIPPED" >> $GITHUB_OUTPUT
+      
+      - name: Notify Slack
+        uses: rtCamp/action-slack-notify@v2
+        env:
+          SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK_URL }}
+          SLACK_TITLE: "Test Results"
+          SLACK_MESSAGE: |
+            *Test Statistics*
+            Total: ${{ steps.extract-stats.outputs.total }}
+            Passed: ${{ steps.extract-stats.outputs.passed }} ✅
+            Failed: ${{ steps.extract-stats.outputs.failed }} ❌
+            Flaky: ${{ steps.extract-stats.outputs.flaky }} ⚠️
+            Skipped: ${{ steps.extract-stats.outputs.skipped }} ⏭️
+            
+            *Build Information*
+            Build: ${{ github.run_id }}
+            Commit: ${{ github.sha }}
+            Branch: ${{ github.ref_name }}
+            Run URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+            
+            *Test Reports (Google Cloud Storage)*
+            📊 Custom Report: ${{ needs.test.outputs.custom_report_url }}
+            🗂️ GCS Console: ${{ needs.test.outputs.bucket_url }}
+
