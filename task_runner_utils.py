@@ -63,17 +63,50 @@ async def run_task(llm, task_info, task_number):
                 
                 if hasattr(step, 'action'):
                     action_obj = step.action
-                    # Get the action name/type
-                    if hasattr(action_obj, '__class__'):
-                        action_name = action_obj.__class__.__name__
-                    elif hasattr(action_obj, 'name'):
-                        action_name = str(action_obj.name)
-                    else:
-                        action_name = str(action_obj)
                     
-                    # Try to get action details/parameters
-                    if hasattr(action_obj, '__dict__'):
-                        action_details = str(action_obj.__dict__)
+                    # Handle list of actions
+                    if isinstance(action_obj, list) and len(action_obj) > 0:
+                        action_obj = action_obj[0]
+                    
+                    # Try to extract action name from various sources
+                    if action_obj:
+                        # Check for root attribute (common pattern in AgentOutput models)
+                        if hasattr(action_obj, 'root'):
+                            root_obj = action_obj.root
+                            if hasattr(root_obj, '__class__'):
+                                action_name = root_obj.__class__.__name__.replace('Model', '').replace('Action', '')
+                            # Try to extract specific action details
+                            if hasattr(root_obj, '__dict__'):
+                                for key, value in root_obj.__dict__.items():
+                                    if value and key not in ['model_config', 'model_fields']:
+                                        action_details = f"{key}: {value}"
+                                        break
+                        # Check for class name
+                        elif hasattr(action_obj, '__class__'):
+                            action_name = action_obj.__class__.__name__.replace('Model', '').replace('Action', '')
+                            if hasattr(action_obj, '__dict__'):
+                                action_details = str(action_obj.__dict__)
+                        # Check for name attribute
+                        elif hasattr(action_obj, 'name'):
+                            action_name = str(action_obj.name)
+                        else:
+                            action_name = str(type(action_obj).__name__)
+                
+                # If still N/A, try to extract from result
+                if action_name == 'N/A' and hasattr(step, 'result'):
+                    result_str = str(step.result)
+                    if 'Clicked' in result_str:
+                        action_name = 'Click'
+                    elif 'Scrolled' in result_str:
+                        action_name = 'Scroll'
+                    elif 'Navigated' in result_str or 'Navigate' in result_str:
+                        action_name = 'Navigate'
+                    elif 'Waited' in result_str:
+                        action_name = 'Wait'
+                    elif 'Switched' in result_str:
+                        action_name = 'SwitchTab'
+                    elif 'Input' in result_str or 'Typed' in result_str:
+                        action_name = 'Input'
                 
                 # Extract thought/reasoning
                 thought = ''

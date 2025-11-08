@@ -3,7 +3,7 @@ import asyncio
 from llm_config import get_llm
 from sheets_reader import get_tasks_by_category
 from task_runner_utils import run_tasks_sequential, run_tasks_parallel, print_summary
-from report_generator import generate_html_report, save_report_index
+from report_generator import generate_html_report
 import os
 import config
 
@@ -61,7 +61,6 @@ async def main():
         # Generate HTML report
         print("\n📊 Generating HTML report...")
         report_path = generate_html_report(results)
-        save_report_index(report_path)
         print(f"✅ Report generated: {os.path.abspath(report_path)}")
         print(f"📂 Open in browser: file:///{os.path.abspath(report_path).replace(chr(92), '/')}")
         
