@@ -3,6 +3,7 @@ Common utilities for running browser automation tasks
 """
 import asyncio
 import os
+import json
 from browser_use import Agent, Browser
 import config
 
@@ -40,7 +41,55 @@ async def run_task(llm, task_info, task_number):
         headless = config.HEADLESS_BROWSER
         
         # Create browser instance with configuration
-        browser = Browser(headless=headless)
+        if config.USE_LAMBDATEST:
+            # LambdaTest remote browser configuration
+            if not config.LT_USERNAME or not config.LT_ACCESS_KEY:
+                raise ValueError("LT_USERNAME and LT_ACCESS_KEY must be set when USE_LAMBDATEST is true")
+            
+            logs.append(f"[{start_time.strftime('%H:%M:%S')}] Initializing LambdaTest remote execution")
+            
+            # LambdaTest capabilities for Playwright
+            lt_capabilities = {
+                "browserName": "Chrome",
+                "browserVersion": "latest",
+                "LT:Options": {
+                    "platform": "Windows 10",
+                    "build": f"WebAgentAA-{start_time.strftime('%Y%m%d')}",
+                    "name": f"{task_info['scenario_name']} - Task #{task_number}",
+                    "user": config.LT_USERNAME,
+                    "accessKey": config.LT_ACCESS_KEY,
+                    "network": True,
+                    "video": True,
+                    "console": True,
+                    "visual": True,
+                    "project": "WebAgentAA",
+                    "w3c": True,
+                    "plugin": "playwright-python",
+                }
+            }
+            
+            # Create LambdaTest connection URL
+            capabilities_json = json.dumps(lt_capabilities)
+            cdp_url = f"wss://cdp.lambdatest.com/playwright?capabilities={capabilities_json}"
+            
+            # Initialize browser with LambdaTest CDP endpoint
+            # Note: This requires the browser-use library to support cdp_url parameter
+            # If not supported, this will fall back to local execution with a warning
+            try:
+                browser = Browser(
+                    headless=False,
+                    cdp_url=cdp_url
+                )
+                logs.append(f"[{start_time.strftime('%H:%M:%S')}] Connected to LambdaTest")
+            except TypeError:
+                # If browser-use doesn't support cdp_url, log warning and use local
+                logs.append(f"[{start_time.strftime('%H:%M:%S')}] WARNING: browser-use doesn't support remote execution")
+                logs.append(f"[{start_time.strftime('%H:%M:%S')}] Falling back to local browser execution")
+                browser = Browser(headless=headless)
+        else:
+            # Local browser execution
+            browser = Browser(headless=headless)
+            logs.append(f"[{start_time.strftime('%H:%M:%S')}] Using local browser execution")
         
         # Create and run agent with configured browser
         agent = Agent(task=task_info['prompt_text'], llm=llm, browser=browser)

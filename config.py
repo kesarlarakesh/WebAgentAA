@@ -9,6 +9,11 @@ from typing import Literal
 GOOGLE_API_KEY = os.getenv('GOOGLE_API_KEY', '')
 GOOGLE_SHEETS_CREDENTIALS = os.getenv('GOOGLE_SHEETS_CREDENTIALS', './google-sheets-credentials.json')
 
+# LambdaTest Configuration
+USE_LAMBDATEST = os.getenv('USE_LAMBDATEST', 'false').lower() == 'true'
+LT_USERNAME = os.getenv('LT_USERNAME', '')
+LT_ACCESS_KEY = os.getenv('LT_ACCESS_KEY', '')
+
 # Google Sheets Configuration (hardcoded - modify here)
 SPREADSHEET_ID = '1D6vrChZ87E06a-wBcVqe9PJk48UpboDQxQb22OlxouY' 
 SHEET_NAME = 'Tasks'
@@ -47,6 +52,13 @@ def validate_config():
     if EXECUTION_MODE not in ['sequential', 'parallel']:
         errors.append(f"Invalid EXECUTION_MODE: {EXECUTION_MODE}. Must be 'sequential' or 'parallel'")
     
+    # Validate LambdaTest configuration if enabled
+    if USE_LAMBDATEST:
+        if not LT_USERNAME:
+            errors.append("LT_USERNAME is required when USE_LAMBDATEST=true")
+        if not LT_ACCESS_KEY:
+            errors.append("LT_ACCESS_KEY is required when USE_LAMBDATEST=true")
+    
     if errors:
         raise ValueError(f"Configuration errors:\n" + "\n".join(f"  - {e}" for e in errors))
     
@@ -79,6 +91,17 @@ def print_config(hide_secrets=True):
     print("\n🔷 Browser:")
     print(f"  HEADLESS_BROWSER: {HEADLESS_BROWSER}")
     print(f"  BROWSER_TIMEOUT: {BROWSER_TIMEOUT}ms")
+    
+    # LambdaTest
+    print("\n🔷 LambdaTest:")
+    print(f"  USE_LAMBDATEST: {USE_LAMBDATEST}")
+    if USE_LAMBDATEST:
+        if hide_secrets:
+            print(f"  LT_USERNAME: {'*' * len(LT_USERNAME) if LT_USERNAME else 'Not set'}")
+            print(f"  LT_ACCESS_KEY: {'*' * 10 if LT_ACCESS_KEY else 'Not set'}")
+        else:
+            print(f"  LT_USERNAME: {LT_USERNAME}")
+            print(f"  LT_ACCESS_KEY: {LT_ACCESS_KEY}")
     
     # Reports
     print("\n🔷 Reports:")
