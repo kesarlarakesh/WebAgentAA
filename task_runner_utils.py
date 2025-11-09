@@ -23,11 +23,11 @@ def mask_sensitive_data(text):
     if not text:
         return text
     
-    # Mask LambdaTest CDP URLs with capabilities parameter
-    # This prevents exposing the entire capabilities JSON in URLs
+    # Mask LambdaTest CDP URLs with all query parameters
+    # This prevents exposing capabilities, user, and accessKey in URLs
     text = re.sub(
-        r'wss://cdp\.lambdatest\.com/playwright\?capabilities=[^"\s\)]+',
-        'wss://cdp.lambdatest.com/playwright?capabilities=***MASKED***',
+        r'wss://cdp\.lambdatest\.com/playwright\?[^"\s\)]+',
+        'wss://cdp.lambdatest.com/playwright?***MASKED***',
         text
     )
     
@@ -101,7 +101,8 @@ async def run_task(llm, task_info, task_number):
             
             logs.append(f"[{start_time.strftime('%H:%M:%S')}] Initializing LambdaTest remote execution")
             
-            # LambdaTest capabilities for Playwright
+            # LambdaTest capabilities for Playwright CDP
+            # Note: Authentication is done via URL, not in capabilities
             lt_capabilities = {
                 "browserName": "Chrome",
                 "browserVersion": "latest",
@@ -109,8 +110,6 @@ async def run_task(llm, task_info, task_number):
                     "platform": "Windows 10",
                     "build": f"WebAgentAA-{start_time.strftime('%Y%m%d')}",
                     "name": f"{task_info['scenario_name']} - Task #{task_number}",
-                    "user": config.LT_USERNAME,
-                    "accessKey": config.LT_ACCESS_KEY,
                     "network": True,
                     "video": True,
                     "console": True,
@@ -121,10 +120,11 @@ async def run_task(llm, task_info, task_number):
                 }
             }
             
-            # Create LambdaTest connection URL with URL-encoded capabilities
+            # Create LambdaTest CDP connection URL
+            # Format: wss://cdp.lambdatest.com/playwright?capabilities=<caps>&user=<user>&accessKey=<key>
             capabilities_json = json.dumps(lt_capabilities)
             encoded_capabilities = quote(capabilities_json, safe='')
-            cdp_url = f"wss://cdp.lambdatest.com/playwright?capabilities={encoded_capabilities}"
+            cdp_url = f"wss://cdp.lambdatest.com/playwright?capabilities={encoded_capabilities}&user={config.LT_USERNAME}&accessKey={config.LT_ACCESS_KEY}"
             
             # Initialize browser with LambdaTest CDP endpoint
             # Note: This requires the browser-use library to support cdp_url parameter
