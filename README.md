@@ -86,9 +86,9 @@ AI-powered browser automation framework using Google Gemini and browser-use libr
 
 ## Running Tests
 
-### Local Execution
+### Command Line Execution
 
-For local execution, the test environment (local or LambdaTest) is controlled by the `USE_LAMBDATEST` environment variable in your `.env` file:
+When running tests from your local terminal, the test environment (local browser or LambdaTest cloud) is controlled by the `USE_LAMBDATEST` environment variable in your `.env` file:
 
 - **Local Browser Execution**: Set `USE_LAMBDATEST=false` (or omit it)
 - **LambdaTest Cloud Execution**: Set `USE_LAMBDATEST=true` and provide credentials
@@ -196,14 +196,25 @@ export LT_ACCESS_KEY=your_access_key
 python run_single_task.py
 ```
 
-### Benefits of LambdaTest
+### Benefits of LambdaTest Integration
 
 - ☁️ Cloud-based browser execution
-- 🌍 Cross-browser and cross-platform testing
-- 📊 Parallel test execution at scale
-- 🎥 Video recording and screenshots
-- 📝 Detailed test logs and analytics
-- 🚀 No local browser setup required
+- 🌍 Cross-browser and cross-platform testing capabilities
+- 📊 Scalable test execution infrastructure
+- 🚀 No local browser setup required on CI/CD runners
+
+**Note:** Advanced LambdaTest features like video recording, screenshots, and platform-specific analytics require additional configuration and may not be automatically available through the current browser-use library integration.
+
+### Important Notes
+
+**LambdaTest Integration Status:**
+The current implementation includes LambdaTest configuration and will attempt to connect using Playwright's CDP (Chrome DevTools Protocol) endpoint. The integration depends on the `browser-use` library's support for remote browser connections. If the library doesn't support the `cdp_url` parameter, tests will automatically fall back to local browser execution with a warning in the logs.
+
+**For Full LambdaTest Support:**
+If you encounter fallback warnings, you may need to:
+1. Check if `browser-use` library has been updated to support remote connections
+2. Update to the latest version: `pip install --upgrade browser-use`
+3. Or use direct Playwright integration for LambdaTest execution
 
 ### Report Organization
 

@@ -84,10 +84,8 @@ jobs:
     runs-on: ubuntu-latest
     needs: security-scan
     env:
-      USE_LAMBDATEST: ${{ github.event.inputs.test_environment == 'lambdatest' }}
       LT_USERNAME: ${{ secrets.LT_USERNAME }}
       LT_ACCESS_KEY: ${{ secrets.LT_ACCESS_KEY }}
-      TZ: 'Asia/Kolkata'  # Set timezone to India Standard Time (UTC+5:30)
     outputs:
       custom_report_url: ${{ steps.upload-reports.outputs.custom_report_url }}
       bucket_url: ${{ steps.upload-reports.outputs.bucket_url }}
