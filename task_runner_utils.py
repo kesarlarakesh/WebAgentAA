@@ -23,6 +23,14 @@ def mask_sensitive_data(text):
     if not text:
         return text
     
+    # Mask LambdaTest CDP URLs with capabilities parameter
+    # This prevents exposing the entire capabilities JSON in URLs
+    text = re.sub(
+        r'wss://cdp\.lambdatest\.com/playwright\?capabilities=[^"\s\)]+',
+        'wss://cdp.lambdatest.com/playwright?capabilities=***MASKED***',
+        text
+    )
+    
     # Mask LambdaTest access key
     if hasattr(config, 'LT_ACCESS_KEY') and config.LT_ACCESS_KEY and config.LT_ACCESS_KEY in text:
         text = text.replace(config.LT_ACCESS_KEY, '***MASKED_ACCESS_KEY***')
@@ -37,8 +45,14 @@ def mask_sensitive_data(text):
     # Mask usernames in JSON format
     text = re.sub(r'"user"\s*:\s*"[^"]*"', '"user": "***MASKED***"', text)
     
-    # Mask API keys
-    text = re.sub(r'(api[_-]?key|apikey)\s*[:=]\s*["\']?[\w-]{20,}["\']?', r'\1: ***MASKED***', text, flags=re.IGNORECASE)
+    # Mask API keys - more flexible pattern that preserves original delimiter
+    # Matches: api_key=value, apikey: value, api-key = "value", etc.
+    text = re.sub(
+        r'(api[_-]?key|apikey)(\s*[:=]\s*)(["\']?)([A-Za-z0-9_\-]{10,})(["\']?)',
+        r'\1\2\3***MASKED***\5',
+        text,
+        flags=re.IGNORECASE
+    )
     
     # Mask Google API keys
     if hasattr(config, 'GOOGLE_API_KEY') and config.GOOGLE_API_KEY and config.GOOGLE_API_KEY in text:
@@ -121,9 +135,15 @@ async def run_task(llm, task_info, task_number):
                     cdp_url=cdp_url
                 )
                 logs.append(f"[{start_time.strftime('%H:%M:%S')}] Connected to LambdaTest")
-            except TypeError:
+            except TypeError as type_error:
                 # If browser-use doesn't support cdp_url, log warning and use local
                 logs.append(f"[{start_time.strftime('%H:%M:%S')}] WARNING: browser-use doesn't support remote execution")
+                logs.append(f"[{start_time.strftime('%H:%M:%S')}] Falling back to local browser execution")
+                browser = Browser(headless=headless)
+            except Exception as browser_error:
+                # Mask sensitive data in browser connection errors
+                error_msg = mask_sensitive_data(str(browser_error))
+                logs.append(f"[{start_time.strftime('%H:%M:%S')}] ERROR: Failed to connect to LambdaTest: {error_msg}")
                 logs.append(f"[{start_time.strftime('%H:%M:%S')}] Falling back to local browser execution")
                 browser = Browser(headless=headless)
         else:
@@ -210,10 +230,13 @@ async def run_task(llm, task_info, task_number):
                 result_text = mask_sensitive_data(str(step.result)) if hasattr(step, 'result') else 'N/A'
                 model_output_text = mask_sensitive_data(str(step.model_output)) if hasattr(step, 'model_output') else ''
                 
+                # Mask sensitive data in action details as well
+                masked_action_details = mask_sensitive_data(action_details)
+                
                 step_info = {
                     'step_number': i,
                     'action': action_name,
-                    'action_details': action_details,
+                    'action_details': masked_action_details,
                     'thought': thought,
                     'result': result_text,
                     'model_output': model_output_text,
