@@ -31,12 +31,6 @@ def mask_sensitive_data(text):
         text
     )
     
-    # Mask accessKey in URL query parameters
-    text = re.sub(r'[&?]accessKey=[^&\s"]+', '&accessKey=***MASKED***', text)
-    
-    # Mask user in URL query parameters
-    text = re.sub(r'[&?]user=[^&\s"]+', '&user=***MASKED***', text)
-    
     # Mask LambdaTest access key
     if hasattr(config, 'LT_ACCESS_KEY') and config.LT_ACCESS_KEY and config.LT_ACCESS_KEY in text:
         text = text.replace(config.LT_ACCESS_KEY, '***MASKED_ACCESS_KEY***')
