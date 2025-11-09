@@ -185,7 +185,7 @@ WebAgentAA supports running tests on LambdaTest cloud infrastructure for cross-b
 - Select test type
 - Choose "lambdatest" as test environment
 
-**Local Execution:**
+**From Command Line:**
 ```bash
 # Set environment variables
 export USE_LAMBDATEST=true
