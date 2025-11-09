@@ -4,8 +4,40 @@ Common utilities for running browser automation tasks
 import asyncio
 import os
 import json
+import re
+from urllib.parse import quote
 from browser_use import Agent, Browser
 import config
+
+
+def mask_sensitive_data(text):
+    """
+    Mask sensitive information in error messages and logs.
+    
+    Args:
+        text: String that may contain sensitive data
+        
+    Returns:
+        String with sensitive data masked
+    """
+    if not text:
+        return text
+    
+    # Mask LambdaTest access key
+    if config.LT_ACCESS_KEY and config.LT_ACCESS_KEY in text:
+        text = text.replace(config.LT_ACCESS_KEY, '***MASKED_ACCESS_KEY***')
+    
+    # Mask access keys in JSON format
+    text = re.sub(r'"accessKey"\s*:\s*"[^"]*"', '"accessKey": "***MASKED***"', text)
+    
+    # Mask API keys
+    text = re.sub(r'(api[_-]?key|apikey)\s*[:=]\s*["\']?[\w-]{20,}["\']?', r'\1: ***MASKED***', text, flags=re.IGNORECASE)
+    
+    # Mask Google API keys
+    if hasattr(config, 'GOOGLE_API_KEY') and config.GOOGLE_API_KEY and config.GOOGLE_API_KEY in text:
+        text = text.replace(config.GOOGLE_API_KEY, '***MASKED_API_KEY***')
+    
+    return text
 
 
 async def run_task(llm, task_info, task_number):
@@ -68,9 +100,10 @@ async def run_task(llm, task_info, task_number):
                 }
             }
             
-            # Create LambdaTest connection URL
+            # Create LambdaTest connection URL with URL-encoded capabilities
             capabilities_json = json.dumps(lt_capabilities)
-            cdp_url = f"wss://cdp.lambdatest.com/playwright?capabilities={capabilities_json}"
+            encoded_capabilities = quote(capabilities_json, safe='')
+            cdp_url = f"wss://cdp.lambdatest.com/playwright?capabilities={encoded_capabilities}"
             
             # Initialize browser with LambdaTest CDP endpoint
             # Note: This requires the browser-use library to support cdp_url parameter
@@ -162,17 +195,21 @@ async def run_task(llm, task_info, task_number):
                 # Extract thought/reasoning
                 thought = ''
                 if hasattr(step, 'thought'):
-                    thought = str(step.thought)
+                    thought = mask_sensitive_data(str(step.thought))
                 elif hasattr(step, 'model_output'):
-                    thought = str(step.model_output)
+                    thought = mask_sensitive_data(str(step.model_output))
+                
+                # Mask sensitive data in result and model output
+                result_text = mask_sensitive_data(str(step.result)) if hasattr(step, 'result') else 'N/A'
+                model_output_text = mask_sensitive_data(str(step.model_output)) if hasattr(step, 'model_output') else ''
                 
                 step_info = {
                     'step_number': i,
                     'action': action_name,
                     'action_details': action_details,
                     'thought': thought,
-                    'result': str(step.result) if hasattr(step, 'result') else 'N/A',
-                    'model_output': str(step.model_output) if hasattr(step, 'model_output') else '',
+                    'result': result_text,
+                    'model_output': model_output_text,
                     'screenshot': None
                 }
                 agent_steps.append(step_info)
@@ -248,10 +285,14 @@ async def run_task(llm, task_info, task_number):
     except Exception as e:
         from datetime import datetime
         error_time = datetime.now()
-        logs.append(f"[{error_time.strftime('%H:%M:%S')}] ERROR: {str(e)}")
+        
+        # Mask sensitive data in error message
+        error_message = mask_sensitive_data(str(e))
+        
+        logs.append(f"[{error_time.strftime('%H:%M:%S')}] ERROR: {error_message}")
         logs.append(f"[{error_time.strftime('%H:%M:%S')}] Status: FAILED - Exception occurred")
         
-        print(f"\n❌ Test #{task_number} ({task_info['scenario_name']}) failed: {str(e)}\n")
+        print(f"\n❌ Test #{task_number} ({task_info['scenario_name']}) failed: {error_message}\n")
         return {
             'task_number': task_number,
             'scenario': task_info['scenario_name'],
@@ -259,7 +300,7 @@ async def run_task(llm, task_info, task_number):
             'priority': task_info['priority'],
             'prompt': task_info['prompt_text'],
             'success': False,
-            'error': str(e),
+            'error': error_message,
             'logs': logs,
             'agent_steps': []
         }
@@ -269,7 +310,8 @@ async def run_task(llm, task_info, task_number):
             try:
                 await browser.stop()
             except Exception as cleanup_error:
-                print(f"⚠️  Warning: Browser cleanup error: {cleanup_error}")
+                cleanup_msg = mask_sensitive_data(str(cleanup_error))
+                print(f"⚠️  Warning: Browser cleanup error: {cleanup_msg}")
 
 
 async def run_tasks_sequential(llm, tasks, task_delay):
