@@ -24,11 +24,18 @@ def mask_sensitive_data(text):
         return text
     
     # Mask LambdaTest access key
-    if config.LT_ACCESS_KEY and config.LT_ACCESS_KEY in text:
+    if hasattr(config, 'LT_ACCESS_KEY') and config.LT_ACCESS_KEY and config.LT_ACCESS_KEY in text:
         text = text.replace(config.LT_ACCESS_KEY, '***MASKED_ACCESS_KEY***')
+    
+    # Mask LambdaTest username
+    if hasattr(config, 'LT_USERNAME') and config.LT_USERNAME and config.LT_USERNAME in text:
+        text = text.replace(config.LT_USERNAME, '***MASKED_USERNAME***')
     
     # Mask access keys in JSON format
     text = re.sub(r'"accessKey"\s*:\s*"[^"]*"', '"accessKey": "***MASKED***"', text)
+    
+    # Mask usernames in JSON format
+    text = re.sub(r'"user"\s*:\s*"[^"]*"', '"user": "***MASKED***"', text)
     
     # Mask API keys
     text = re.sub(r'(api[_-]?key|apikey)\s*[:=]\s*["\']?[\w-]{20,}["\']?', r'\1: ***MASKED***', text, flags=re.IGNORECASE)
