@@ -22,6 +22,14 @@ on:
           - multiple
           - priority
           - category
+      test_environment:
+        description: 'Test environment (local or lambdatest)'
+        required: true
+        default: 'local'
+        type: choice
+        options:
+          - local
+          - lambdatest
   
   # Schedule to run daily at 9 AM UTC
   schedule:
@@ -75,6 +83,11 @@ jobs:
   test:
     runs-on: ubuntu-latest
     needs: security-scan
+    env:
+      USE_LAMBDATEST: ${{ github.event.inputs.test_environment == 'lambdatest' }}
+      LT_USERNAME: ${{ secrets.LT_USERNAME }}
+      LT_ACCESS_KEY: ${{ secrets.LT_ACCESS_KEY }}
+      TZ: 'Asia/Kolkata'  # Set timezone to India Standard Time (UTC+5:30)
     outputs:
       custom_report_url: ${{ steps.upload-reports.outputs.custom_report_url }}
       bucket_url: ${{ steps.upload-reports.outputs.bucket_url }}
@@ -108,20 +121,52 @@ jobs:
         run: |
           echo '${{ secrets.GOOGLE_SHEETS_CREDENTIALS_JSON }}' > google-sheets-credentials.json
       
-      - name: Run single task test
-        if: github.event_name != 'workflow_dispatch' || github.event.inputs.test_type == 'single'
+      - name: Run single task test (Local)
+        if: (github.event_name != 'workflow_dispatch' || github.event.inputs.test_type == 'single') && (github.event.inputs.test_environment == 'local' || github.event.inputs.test_environment == null)
+        env:
+          USE_LAMBDATEST: false
         run: python run_single_task.py
       
-      - name: Run multiple tasks test
-        if: github.event.inputs.test_type == 'multiple'
+      - name: Run single task test (LambdaTest)
+        if: (github.event_name != 'workflow_dispatch' || github.event.inputs.test_type == 'single') && github.event.inputs.test_environment == 'lambdatest'
+        env:
+          USE_LAMBDATEST: true
+        run: python run_single_task.py
+      
+      - name: Run multiple tasks test (Local)
+        if: github.event.inputs.test_type == 'multiple' && (github.event.inputs.test_environment == 'local' || github.event.inputs.test_environment == null)
+        env:
+          USE_LAMBDATEST: false
         run: python run_multiple_tasks.py
       
-      - name: Run priority-based test
-        if: github.event.inputs.test_type == 'priority'
+      - name: Run multiple tasks test (LambdaTest)
+        if: github.event.inputs.test_type == 'multiple' && github.event.inputs.test_environment == 'lambdatest'
+        env:
+          USE_LAMBDATEST: true
+        run: python run_multiple_tasks.py
+      
+      - name: Run priority-based test (Local)
+        if: github.event.inputs.test_type == 'priority' && (github.event.inputs.test_environment == 'local' || github.event.inputs.test_environment == null)
+        env:
+          USE_LAMBDATEST: false
         run: python run_by_priority.py
       
-      - name: Run category-based test
-        if: github.event.inputs.test_type == 'category'
+      - name: Run priority-based test (LambdaTest)
+        if: github.event.inputs.test_type == 'priority' && github.event.inputs.test_environment == 'lambdatest'
+        env:
+          USE_LAMBDATEST: true
+        run: python run_by_priority.py
+      
+      - name: Run category-based test (Local)
+        if: github.event.inputs.test_type == 'category' && (github.event.inputs.test_environment == 'local' || github.event.inputs.test_environment == null)
+        env:
+          USE_LAMBDATEST: false
+        run: python run_by_category.py
+      
+      - name: Run category-based test (LambdaTest)
+        if: github.event.inputs.test_type == 'category' && github.event.inputs.test_environment == 'lambdatest'
+        env:
+          USE_LAMBDATEST: true
         run: python run_by_category.py
       
       # Google Cloud SDK Setup and Report Upload
@@ -141,7 +186,14 @@ jobs:
         run: |
           set -e
           
-          GCS_FOLDER="webagentreports"
+          # Determine folder based on test environment
+          TEST_ENV="${{ github.event.inputs.test_environment || 'local' }}"
+          if [ "$TEST_ENV" = "lambdatest" ]; then
+            GCS_FOLDER="webagentreports/lambdatest"
+          else
+            GCS_FOLDER="webagentreports/local"
+          fi
+          
           BUCKET_NAME="aawebagentreports"
           GCS_REPORTS_PATH="${GCS_FOLDER}/reports"
           

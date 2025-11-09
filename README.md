@@ -1,6 +1,6 @@
 # WebAgentAA - Browser Automation Framework
 
-AI-powered browser automation framework using Google Gemini and browser-use library for automated testing with Google Sheets integration.
+AI-powered browser automation framework using Google Gemini and browser-use library for automated testing with Google Sheets integration. Supports both local and LambdaTest cloud execution.
 
 ## Features
 
@@ -10,7 +10,9 @@ AI-powered browser automation framework using Google Gemini and browser-use libr
 - 🔄 Sequential and parallel test execution modes
 - 🎯 Filter tests by priority or category
 - 🌐 Headless and headed browser modes
+- ☁️ LambdaTest cloud execution support
 - 📦 Agent step tracking and logging
+- 📂 Separate GCS folders for local and LambdaTest reports
 
 ## Prerequisites
 
@@ -48,6 +50,11 @@ AI-powered browser automation framework using Google Gemini and browser-use libr
    
    # Google Sheets Credentials Path
    GOOGLE_SHEETS_CREDENTIALS=./google-sheets-credentials.json
+   
+   # LambdaTest Configuration (Optional - for cloud execution)
+   USE_LAMBDATEST=false
+   LT_USERNAME=your_lambdatest_username
+   LT_ACCESS_KEY=your_lambdatest_access_key
    ```
    
    b. Edit `config.py` to set your execution configuration:
@@ -79,6 +86,13 @@ AI-powered browser automation framework using Google Gemini and browser-use libr
 
 ## Running Tests
 
+### Local Execution
+
+For local execution, the test environment (local or LambdaTest) is controlled by the `USE_LAMBDATEST` environment variable in your `.env` file:
+
+- **Local Browser Execution**: Set `USE_LAMBDATEST=false` (or omit it)
+- **LambdaTest Cloud Execution**: Set `USE_LAMBDATEST=true` and provide credentials
+
 ### Single Task
 ```bash
 python run_single_task.py
@@ -108,19 +122,94 @@ To run tests in GitHub Actions, add these secrets to your repository:
 
    - `GOOGLE_API_KEY` - Your Gemini API key
    - `GOOGLE_SHEETS_CREDENTIALS_JSON` - Full JSON content of your credentials file
+   - `GCP_SERVICE_ACCOUNT_KEY` - Google Cloud Platform service account key for GCS uploads
+   - `SLACK_WEBHOOK_URL` - (Optional) Slack webhook URL for notifications
+
+**For LambdaTest Integration:**
+   - `LT_USERNAME` - Your LambdaTest username
+   - `LT_ACCESS_KEY` - Your LambdaTest access key
 
 **Note:** Other configuration values (SPREADSHEET_ID, execution mode, priorities, etc.) are configured in `config.py` and committed to your repository.
 
 ### Manual Workflow Trigger
 
 1. Go to **Actions** tab
-2. Select **Browser Automation Tests**
+2. Select **AA Agent Automation Tests**
 3. Click **Run workflow**
-4. Choose test type (single, multiple, priority, category)
+4. Choose:
+   - **Test type**: single, multiple, priority, or category
+   - **Test environment**: local or lambdatest
+5. Click **Run workflow**
+
+### Test Environments
+
+- **Local**: Tests run on GitHub Actions runners using local Playwright browser
+  - Reports uploaded to: `gs://aawebagentreports/webagentreports/local/reports/`
+  
+- **LambdaTest**: Tests run on LambdaTest cloud infrastructure
+  - Reports uploaded to: `gs://aawebagentreports/webagentreports/lambdatest/reports/`
+  - Requires `LT_USERNAME` and `LT_ACCESS_KEY` secrets
 
 ### Scheduled Runs
 
-Tests automatically run daily at 9 AM UTC (configured in workflow file).
+Tests automatically run daily at 9 AM UTC in **local** mode (configured in workflow file).
+
+## LambdaTest Integration
+
+WebAgentAA supports running tests on LambdaTest cloud infrastructure for cross-browser testing and scalability.
+
+### Setup for LambdaTest
+
+1. **Create LambdaTest Account**
+   - Sign up at [LambdaTest](https://www.lambdatest.com/)
+   - Get your username and access key from [LambdaTest Profile](https://accounts.lambdatest.com/profile)
+
+2. **Configure Environment Variables**
+   
+   Add to your `.env` file:
+   ```env
+   # LambdaTest Configuration
+   USE_LAMBDATEST=true
+   LT_USERNAME=your_lambdatest_username
+   LT_ACCESS_KEY=your_lambdatest_access_key
+   ```
+
+3. **GitHub Actions Setup**
+   - Add `LT_USERNAME` and `LT_ACCESS_KEY` as repository secrets
+   - Select "lambdatest" as test environment when triggering workflow
+
+### Running Tests on LambdaTest
+
+**Via GitHub Actions:**
+- Go to Actions → AA Agent Automation Tests → Run workflow
+- Select test type
+- Choose "lambdatest" as test environment
+
+**Local Execution:**
+```bash
+# Set environment variables
+export USE_LAMBDATEST=true
+export LT_USERNAME=your_username
+export LT_ACCESS_KEY=your_access_key
+
+# Run tests
+python run_single_task.py
+```
+
+### Benefits of LambdaTest
+
+- ☁️ Cloud-based browser execution
+- 🌍 Cross-browser and cross-platform testing
+- 📊 Parallel test execution at scale
+- 🎥 Video recording and screenshots
+- 📝 Detailed test logs and analytics
+- 🚀 No local browser setup required
+
+### Report Organization
+
+Tests executed on different environments are organized separately in Google Cloud Storage:
+- Local tests: `webagentreports/local/reports/`
+- LambdaTest: `webagentreports/lambdatest/reports/`
 
 ## Google Sheet Structure
 
