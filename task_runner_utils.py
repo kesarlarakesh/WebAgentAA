@@ -69,7 +69,7 @@ async def run_task(llm, task_info, task_number):
                         action_obj = action_obj[0]
                     
                     # Try to extract action name from various sources
-                    if action_obj:
+                    if action_obj is not None:
                         # Check for root attribute (common pattern in AgentOutput models)
                         if hasattr(action_obj, 'root'):
                             root_obj = action_obj.root
@@ -78,7 +78,7 @@ async def run_task(llm, task_info, task_number):
                             # Try to extract specific action details
                             if hasattr(root_obj, '__dict__'):
                                 for key, value in root_obj.__dict__.items():
-                                    if value and key not in ['model_config', 'model_fields']:
+                                    if value is not None and key not in ['model_config', 'model_fields']:
                                         action_details = f"{key}: {value}"
                                         break
                         # Check for class name
@@ -94,18 +94,20 @@ async def run_task(llm, task_info, task_number):
                 
                 # If still N/A, try to extract from result
                 if action_name == 'N/A' and hasattr(step, 'result'):
+                    import re
                     result_str = str(step.result)
-                    if 'Clicked' in result_str:
+                    # Use word boundary matching to avoid false positives
+                    if re.search(r'\bClicked\b', result_str):
                         action_name = 'Click'
-                    elif 'Scrolled' in result_str:
+                    elif re.search(r'\bScrolled\b', result_str):
                         action_name = 'Scroll'
-                    elif 'Navigated' in result_str or 'Navigate' in result_str:
+                    elif re.search(r'\b(Navigated|Navigate)\b', result_str):
                         action_name = 'Navigate'
-                    elif 'Waited' in result_str:
+                    elif re.search(r'\bWaited\b', result_str):
                         action_name = 'Wait'
-                    elif 'Switched' in result_str:
+                    elif re.search(r'\bSwitched\b', result_str):
                         action_name = 'SwitchTab'
-                    elif 'Input' in result_str or 'Typed' in result_str:
+                    elif re.search(r'\b(Input|Typed)\b', result_str):
                         action_name = 'Input'
                 
                 # Extract thought/reasoning
